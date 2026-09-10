@@ -43,6 +43,19 @@ uv run build.py
 | `html`                              | 選択範囲を罫線・書式つきの HTML の表としてクリップボードにコピー                                  | [`mHtml.bas`](src/mHtml.bas)         |
 | `sort` / `uniq` / `hsort` / `huniq` | 選択範囲の行 (h: 列) を並べ替え / 重複を取り除く                                                  | [`mSort.bas`](src/mSort.bas)         |
 
+## テスト
+
+Excel を使わずに、ヘッドレスの LibreOffice Calc 上で `src/` の VBA をコンパイル・実行して検証できる。push / PR では GitHub Actions で自動実行する。
+
+```sh
+sudo apt-get install -y libreoffice-calc python3-uno   # 1回だけ
+python3 tests/run.py                  # コンパイル確認 + 全テスト
+python3 tests/run.py --compile        # コンパイル確認だけ
+python3 tests/run.py --bisect mHtml   # コンパイルに失敗する箇所を絞り込む
+```
+
+LibreOffice の VBA 互換は完全ではない (罫線の線種を読み戻せない、`step` / `base` を識別子に使えない、など)。仕組み・テストの書き方・担保できる範囲は [docs/TESTING.md](docs/TESTING.md) を参照。
+
 ## 開発メモ
 
 - **文字コード**: `src/` は UTF-8 / CRLF で保存する。VBA プロジェクトには cp932 で埋め込まれるため、使える文字は cp932 の範囲内に限られる (範囲外はビルドエラー)。VBE から書き出した cp932 のファイルもそのまま読める。
