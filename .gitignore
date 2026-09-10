@@ -1,2 +1,4 @@
 build/
 .claude/
+tests/harness/.loprofile/
+__pycache__/

@@ -20,6 +20,25 @@ Excel の個人用マクロブック (`PERSONAL.XLSB`) を、VBA ソースから
 - ただし、コンパイル後のVBAプロジェクトへ埋め込む際は最終的に cp932 へエンコードされるため、**ソースコード中で使う文字は cp932(Shift-JIS) の範囲内に収めること** (絵文字や一部の拡張漢字・記号は不可)。範囲外の文字が含まれる場合、`build.py` はビルド時にエラーで検出する。
 - VBE 上で直接コードを編集して `Export File...` した場合、そのファイルは Shift-JIS で書き出される。`build.py` は UTF-8 として読めない場合に自動で cp932 にフォールバックするため、そのまま `src/` に置いてもビルドは壊れない (ただし正はUTF-8なので、余裕があれば `iconv -f CP932 -t UTF-8` 等で正規化しておくと良い)。
 
+## テスト
+
+Excel を使わずに、ヘッドレスの LibreOffice 上で `src/` の VBA を実行して検証できる。
+
+```sh
+sudo apt-get install -y libreoffice-calc python3-uno   # 1回だけ
+python3 tests/run.py            # コンパイル確認 + 全テスト
+python3 tests/run.py --compile  # コンパイル確認だけ (速い)
+```
+
+LibreOffice Calc のドキュメントを VBA 互換モードで開くと、`Application` / `Selection` /
+`Range` / `Interior` / `Borders` といった Excel のオブジェクトモデルと `xlEdgeTop` などの
+定数がそのまま使えるため、色パースのような純粋なロジックだけでなく、セルを実際に塗る
+コードパスまで Excel 無しで動かせる。
+
+ただし LibreOffice の VBA 互換は完全ではない (罫線の線種やステータスバーは読み戻せない、
+`step` / `base` は識別子に使えない、など)。何が担保できて何ができないかは
+[docs/TESTING.md](docs/TESTING.md) を参照。
+
 ## 機能一覧
 
 マクロは、スペース区切りで「マクロ名 引数...」を入力して実行するランチャー ([参考](https://zenn.dev/sinotca/articles/6bf254d056af28)) から呼び出す想定 (例: `bg amber500`, `tb 2`)。多くはステータスバーに結果・エラーを表示する。
@@ -129,4 +148,9 @@ src/           VBA ソース (.bas / .cls、UTF-8 / CRLF。文字種は cp932 �
   mUtil.bas      tb コマンド
   mPolygon.bas   polygon コマンド
 build/         ビルド成果物 (gitignore 対象)
+tests/         Excel 不要のテスト基盤 (docs/TESTING.md 参照)
+  run.py         テストランナー
+  harness/       LibreOffice の起動と src の読み込み
+  vba/           テスト本体 (TestLib.bas + Test_*.bas)
+docs/TESTING.md  テストの仕組みと再現度の限界
 ```

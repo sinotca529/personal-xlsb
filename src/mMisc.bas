@@ -132,11 +132,11 @@ End Sub
 
 
 ' ---- 共通ユーティリティ ----
-Private Function UnionSafe(base As Range, add As Range) As Range
-    If base Is Nothing Then
-        Set UnionSafe = add
+Private Function UnionSafe(baseRng As Range, addRng As Range) As Range
+    If baseRng Is Nothing Then
+        Set UnionSafe = addRng
     Else
-        Set UnionSafe = Union(base, add)
+        Set UnionSafe = Union(baseRng, addRng)
     End If
 End Function
 

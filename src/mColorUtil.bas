@@ -44,7 +44,7 @@ End Function
 ' で解決する。STEP を省略した場合は既定段階 500 にフォールバックする。
 Public Function TryParseHueToken(ByVal token As String, ByRef outColor As Long) As Boolean
     Dim name As String
-    Dim step As String
+    Dim lvl As String
     Dim hexStr As String
     Dim i As Long
 
@@ -61,16 +61,20 @@ Public Function TryParseHueToken(ByVal token As String, ByRef outColor As Long) 
             Exit Function
     End Select
 
-    ' 末尾の数字 (段階) を切り出す
+    ' 末尾の数字 (段階) を切り出す。
+    ' VBA の And は短絡評価しないため、i >= 1 と Mid$ を1つの条件に
+    ' まとめると i = 0 のときに Mid$(token, 0, 1) が実行時エラー5になる。
     i = Len(token)
-    Do While i >= 1 And Mid$(token, i, 1) Like "[0-9]"
+    Do While i >= 1
+        ' Not は Like より結合が強いため、括弧が無いと型不一致 (エラー13) になる。
+        If Not (Mid$(token, i, 1) Like "[0-9]") Then Exit Do
         i = i - 1
     Loop
     name = Left$(token, i)
-    step = Mid$(token, i + 1)
-    If Len(step) = 0 Then step = "500"
+    lvl = Mid$(token, i + 1)
+    If Len(lvl) = 0 Then lvl = "500"
 
-    hexStr = mPalette.LookupHex(name, step)
+    hexStr = mPalette.LookupHex(name, lvl)
     If Len(hexStr) = 0 Then Exit Function
 
     TryParseHueToken = TryParseHexColor(hexStr, outColor)
