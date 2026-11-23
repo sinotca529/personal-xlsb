@@ -2,6 +2,11 @@ Attribute VB_Name = "Launcher"
 Private Const MAX_ROWS As Long = 5    ' 補完の最大表示行数
 Private Const ROW_HEIGHT As Long = 18 ' 補完候補の行高
 
+Private Const COLUMN_GAP As Single = 12   ' 候補と説明の間の余白 (pt)
+Private Const LIST_CHROME As Single = 20  ' 縦スクロールバーと枠線のぶん、列幅から差し引く幅 (pt)
+
+Private probe As MSForms.Label ' 文字列の幅を測るための非表示ラベル
+
 Private Sub UserForm_Initialize()
     ' フォーム背景の透過
     mLauncherFormUtil.MakeFormTransparent Me
@@ -27,11 +32,20 @@ Private Sub UserForm_Initialize()
         .Top = Me.TextBox1.Top + Me.TextBox1.Height
         .Width = Me.TextBox1.Width
         .Height = MAX_ROWS * ROW_HEIGHT + 1
+        .ColumnCount = 2 ' 候補 / 説明
         .BorderStyle = fmBorderStyleSingle
         .SpecialEffect = fmSpecialEffectFlat
         .BackColor = &HF0F0F0
         .Visible = False
         .Clear
+    End With
+
+    Set probe = Me.Controls.Add("Forms.Label.1", "TextProbe", False)
+    With probe
+        .WordWrap = False
+        .AutoSize = True
+        .Font.Name = Me.ListBox1.Font.Name
+        .Font.Size = Me.ListBox1.Font.Size
     End With
 
     Me.Width = Me.TextBox1.Width
@@ -85,7 +99,7 @@ Private Sub SelectCandidate(idxDelta As Integer)
 
     ' 入力欄に選択対象を反映
     With Me.TextBox1
-        .text = Me.ListBox1.List(Me.ListBox1.ListIndex)
+        .text = Me.ListBox1.List(Me.ListBox1.ListIndex, 0)
         .SelStart = Len(Me.TextBox1.text)
         .SelLength = 0
     End With
@@ -95,16 +109,30 @@ Private Sub UpdateCandidates()
     Dim ctx As String, pre As String
     Dim cands As Collection, pair As Variant
     Dim i As Long, numShow As Long
+    Dim cand As String, w As Single, colWidth As Single
 
     Me.ListBox1.Clear
 
     Set cands = CP_ListCandidates(Me.TextBox1.text)
 
+    Dim descWidth As Single
+
     For i = 1 To cands.Count
         pair = cands(i)
-        Me.ListBox1.AddItem CP_ReplaceLastToken(Me.TextBox1.text, CStr(pair(0)))
-        ' 説明を2列目に出す場合:
-        ' Me.ListBox1.List(Me.ListBox1.ListCount - 1, 1) = CStr(pair(1))
+        cand = CP_ReplaceLastToken(Me.TextBox1.text, CStr(pair(0)))
+        Me.ListBox1.AddItem cand
+        w = MeasureText(cand)
+        If w > colWidth Then colWidth = w
+    Next i
+
+    ' 1列目は最長の候補に合わせ (全体の 6 割まで)、残りを説明に充てる。
+    ' 合計がリストの内幅を超えると横スクロールバーが出るので、説明は列幅に収まるよう切り詰める。
+    colWidth = WorksheetFunction.Min(colWidth + COLUMN_GAP, Me.ListBox1.Width * 0.6)
+    descWidth = WorksheetFunction.Max(Me.ListBox1.Width - colWidth - LIST_CHROME, 0)
+    Me.ListBox1.ColumnWidths = colWidth & " pt;" & descWidth & " pt"
+    For i = 1 To cands.Count
+        pair = cands(i)
+        Me.ListBox1.List(i - 1, 1) = FitText(CStr(pair(1)), descWidth)
     Next i
 
     numShow = WorksheetFunction.Min(Me.ListBox1.ListCount, MAX_ROWS)
@@ -114,3 +142,24 @@ Private Sub UpdateCandidates()
         .Visible = (numShow > 0)
     End With
 End Sub
+
+' text が maxWidth (pt) に収まらなければ、末尾を "…" にして収まる長さまで切り詰める
+Private Function FitText(ByVal text As String, ByVal maxWidth As Single) As String
+    Dim lo As Long, hi As Long, mid_ As Long
+
+    If MeasureText(text) <= maxWidth Then FitText = text: Exit Function
+
+    ' 収まる最長の接頭辞の長さを二分探索
+    lo = 0: hi = Len(text) - 1
+    Do While lo < hi
+        mid_ = (lo + hi + 1) \ 2
+        If MeasureText(Left$(text, mid_) & "…") <= maxWidth Then lo = mid_ Else hi = mid_ - 1
+    Loop
+    FitText = IIf(lo > 0, Left$(text, lo) & "…", "")
+End Function
+
+' probe のフォントで text を描いたときの幅
+Private Function MeasureText(ByVal text As String) As Single
+    probe.Caption = text
+    MeasureText = probe.Width
+End Function
