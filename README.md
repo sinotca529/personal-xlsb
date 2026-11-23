@@ -7,7 +7,7 @@ Excel の個人用マクロブック (`PERSONAL.XLSB`) を、VBA ソースから
 ## セットアップ
 
 ```sh
-./build.py
+uv run build.py
 ```
 
 - `src/` 内の `.bas` / `.cls` をすべて読み込み、`build/PERSONAL.xlsb` を新規生成。
@@ -21,9 +21,40 @@ Excel の個人用マクロブック (`PERSONAL.XLSB`) を、VBA ソースから
 - ただし、コンパイル後のVBAプロジェクトへ埋め込む際は最終的に cp932 へエンコードされるため、**ソースコード中で使う文字は cp932(Shift-JIS) の範囲内に収めること** (絵文字や一部の拡張漢字・記号は不可)。範囲外の文字が含まれる場合、`build.py` はビルド時にエラーで検出する。
 - VBE 上で直接コードを編集して `Export File...` した場合、そのファイルは Shift-JIS で書き出される。`build.py` は UTF-8 として読めない場合に自動で cp932 にフォールバックするため、そのまま `src/` に置いてもビルドは壊れない (ただし正はUTF-8なので、余裕があれば `iconv -f CP932 -t UTF-8` 等で正規化しておくと良い)。
 
+## ランチャー
+
+マクロは、スペース区切りで「マクロ名 引数...」を入力して実行するランチャー ([参考](https://zenn.dev/sinotca/articles/6bf254d056af28)) から呼び出す想定 (例: `bg amber500`, `tb 2`)。ランチャーもこのリポジトリに含まれ、`PERSONAL.XLSB` に同梱される。
+
+- `Ctrl+L` でランチャーを開く (`PERSONAL.XLSB` の `Workbook_Open` で割り当て)。`Enter` で実行、`Esc` で閉じる。
+- 入力中は補完候補を表示する。`Tab` / `Shift+Tab` / 上下キーで選択。
+- 引数は空白区切り。`"..."` で囲むと空白を含められ、`\n` `\t` `\"` `\\` が使える (例: `fg red "a b" c`)。
+- マクロは `PERSONAL.XLSB` → アクティブなブックの順に探す。
+
+### 補完表 (`COMPLETIONS` 節)
+
+補完候補は、`build.py` がビルド時に `src/*.bas` のヘッダーコメントにある `COMPLETIONS` 節から生成し、`mLauncherCompData` モジュールとして埋め込む (`src/` には置かない)。コマンドを追加・変更したら、同じモジュールのヘッダーに書く。
+
+```vb
+' COMPLETIONS
+'     bg              セル/図形の塗り色
+'     bg copy         色をコピー
+```
+
+- 左側は空白区切りのトークン列 (最後が候補、それより前が文脈)。2つ以上の空白を挟んで右側が説明。
+- 空のコメント行 (`'`) か罫線 (`'===`) で節が終わる。
+- 先頭トークンに対応する `Sub` が `src/*.bas` にない場合や、項目が重複している場合はビルドエラーになる。
+
+### フォーム
+
+`Launcher` フォームのコードは `src/Launcher.frm`、コントロールの配置は `build.py` の `FORMS` で定義する (`.frx` は使わない)。
+
+### 旧 `Launcher.xlam` からの移行
+
+以前は独立したアドイン (`%APPDATA%\Microsoft\AddIns\Launcher.xlam`) だった。両方が `Ctrl+L` を割り当てるため、[ファイル] → [オプション] → [アドイン] → [Excel アドイン] で `Launcher` のチェックを外してから使う。
+
 ## 機能一覧
 
-マクロは、スペース区切りで「マクロ名 引数...」を入力して実行するランチャー ([参考](https://zenn.dev/sinotca/articles/6bf254d056af28)) から呼び出す想定 (例: `bg amber500`, `tb 2`)。多くはステータスバーに結果・エラーを表示する。
+多くはステータスバーに結果・エラーを表示する。
 
 | モジュール | マクロ | 概要 |
 | --- | --- | --- |
@@ -152,17 +183,23 @@ palette   配色一覧シートを表示 (22色相 × 11段階)
 ## リポジトリ構成
 
 ```
-build.py       ビルド & デプロイスクリプト
-src/           VBA ソース (.bas / .cls、UTF-8 / CRLF。文字種は cp932 の範囲内)
-  cBooster.cls   画面更新・イベント抑制を自動 ON/OFF するヘルパークラス
-  mColor.bas     bg / fg / bo コマンド
-  mColorUtil.bas 色パースユーティリティ (HUE[STEP] トークンの解決)
-  mPalette.bas   Tailwind CSS 配色テーブル・palette コマンド
-  mLlp.bas       llp コマンド
-  mMisc.bas      mg / mt コマンド
-  mUtil.bas      tb コマンド
-  mBorder.bas    db コマンド
-  mView.bas      fmt / pbp コマンド
-  mPolygon.bas   polygon / box コマンド
-build/         ビルド成果物 (gitignore 対象)
+build.py                 ビルド & デプロイスクリプト
+src/                     VBA ソース (.bas / .cls、UTF-8 / CRLF。文字種は cp932 の範囲内)
+  cBooster.cls             画面更新・イベント抑制を自動 ON/OFF するヘルパークラス
+  ThisWorkbook.cls         起動時に Ctrl+L へランチャーを割り当てる
+  Launcher.frm             ランチャーのフォーム (コードのみ。配置は build.py の FORMS)
+  mLauncher.bas            ランチャーのショートカット割り当て・コマンド実行
+  mLauncherComp.bas        補完候補の検索
+  mLauncherFormUtil.bas    フォームの透過 (Win32 API)
+  mLauncherStatusBar.bas   ステータスバー上のコマンドモード (":" キー)
+  mColor.bas               bg / fg / bo コマンド
+  mColorUtil.bas           色パースユーティリティ (HUE[STEP] トークンの解決)
+  mPalette.bas             Tailwind CSS 配色テーブル・palette コマンド
+  mLlp.bas                 llp コマンド
+  mMisc.bas                mg / mt コマンド
+  mUtil.bas                tb コマンド
+  mBorder.bas              db コマンド
+  mView.bas                fmt / pbp コマンド
+  mPolygon.bas             polygon / box コマンド
+build/                   ビルド成果物 (gitignore 対象)
 ```
