@@ -16,6 +16,13 @@ Option Private Module
 '     マクロは、個人用マクロブック (このブック) → アクティブなブックの順に探す。
 '     引数は空白区切り。"..." で囲むと空白を含められ、\n \t \" \\ が使える。
 '
+'     ただしマクロ名の直後が空白でなく記号の場合は、Vim の Ex コマンドと同じく、
+'     残りの文字列を丸ごと1つの引数として渡す (空白区切りや "..." の解釈はしない)。
+'     記号の意味 (区切り文字など) は呼ばれたマクロ側が決める。
+'         s/a b/c/g     → s("/a b/c/g")
+'         bg#ffcc00     → bg("#ffcc00")
+'     マクロ名は VBA の識別子に合わせ、英数字・_・. (Module.Macro 形式) から成る。
+'
 ' NOTES
 '     - PERSONAL.XLSB を開いたとき (Workbook_Open) に Ctrl+L を割り当てる。
 '     - Option Private Module のため、このモジュールのマクロは
@@ -55,8 +62,8 @@ Public Sub TryRun(cmd As String)
     Dim a As Variant
     Dim m As String
     
-    ' 1. 入力をスペースで分割して、マクロ名/引数のリストを得る
-    a = SplitToken(cmd)
+    ' 1. 入力をマクロ名/引数のリストに分解する
+    a = ParseCommand(cmd)
     If UBound(a) < 0 Then Exit Sub
     
     ' 2. 個人用マクロブック (このブック) にそのマクロがあれば、実行して終了
@@ -97,6 +104,31 @@ Public Sub TryRun(cmd As String)
     ' 4. マクロの実行に失敗したら、エラーダイアログを出す
     MsgBox "マクロの実行に失敗しました"
 End Sub
+
+' マクロ名の直後が記号なら、残りを丸ごと1引数にする (Vim の :s/a/b/ と同じ)。
+' それ以外は空白区切り (SplitToken)。
+Private Function ParseCommand(ByVal text As String) As Variant
+    Dim i As Long
+    Dim ch As String
+
+    text = Trim$(text)
+    For i = 1 To Len(text)
+        ch = Mid$(text, i, 1)
+        If Not IsNameChar(ch) Then Exit For
+    Next i
+
+    If i > 1 And i <= Len(text) And ch <> " " Then
+        ParseCommand = Array(Left$(text, i - 1), Mid$(text, i))
+    Else
+        ParseCommand = SplitToken(text)
+    End If
+End Function
+
+' マクロ名に使える文字か (VBA の識別子: 英数字・_・日本語など。Module.Macro の . も含める)
+Private Function IsNameChar(ByVal ch As String) As Boolean
+    If ch Like "[A-Za-z0-9_.]" Then IsNameChar = True: Exit Function
+    IsNameChar = (AscW(ch) > 127 Or AscW(ch) < 0) ' ASCII 外 (日本語の識別子など)
+End Function
 
 Private Function SplitToken(text As String) As Variant
     Dim tokens() As String
