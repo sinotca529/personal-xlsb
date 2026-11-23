@@ -1,18 +1,37 @@
 Attribute VB_Name = "mLlp"
-' =========================================================================================
-' llp - Lightweight Linked Picture
+Option Explicit
+'===============================================================================
+' NAME
+'     llp - Lightweight Linked Picture (軽量リンク画像) を管理する
+'
+' SYNOPSIS
+'     llp { insert | i | update | u | migrate | m | clean | c | goto | g | localize | l }
+'
+' DESCRIPTION
+'     リンク画像 (リンクされた図) の参照範囲を「名前定義 + IF(LLP_LINK, 参照式, "")」
+'     で管理し、参照範囲の追跡・再リンクを容易にする。名前 LLP_LINK は普段 FALSE で、
+'     描画を更新するときだけ一時的に TRUE にする。
+'
+'     解説: https://zenn.dev/sinotca/articles/18638886a004d4
+'
+' COMMANDS
+'     insert, i      リンク画像を挿入する (事前に参照範囲をコピーしておく)。
+'     update, u      すべての LLP 画像の描画を更新する。
+'     migrate, m     既存のリンク画像をすべて LLP 管理下に置き換える。
+'     clean, c       使われなくなった LLP 関連の名前定義を削除する。
+'     goto, g        選択中の LLP 画像から参照範囲へジャンプする。
+'     localize, l    LLP 参照式から外部ブック名の修飾を削除する。
 '
 ' COMPLETIONS
-'   llp             Lightweight Linked Picture
-'   llp insert      LLP を挿入します。
-'   llp update      LLP の描画を更新します。
-'   llp migrate     既存のリンクされた図をすべて LLP に置き換えます。
-'   llp clean       使われなくなった LLP 関連の名前を削除します。
-'   llp goto        LLP の定義一にジャンプします。
-'   llp localize    LLP 参照から外部ブック名を削除します。
-' =========================================================================================
+'     llp             軽量リンク画像の管理
+'     llp insert      リンク画像を挿入
+'     llp update      すべての描画を更新
+'     llp migrate     既存のリンク画像を LLP 化
+'     llp clean       不要な名前定義を削除
+'     llp goto        参照範囲へジャンプ
+'     llp localize    外部ブック名の修飾を削除
+'===============================================================================
 
-Option Explicit
 Private Const MSO_PICTURE As Long = 13
 
 Public Sub llp(Optional ByVal cmd As String = "")

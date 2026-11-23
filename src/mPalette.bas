@@ -1,19 +1,27 @@
 Attribute VB_Name = "mPalette"
 Option Explicit
-' =========================================================================================
-' palette - Tailwind CSS の配色を実物の色見本として一覧表示するガイド
+'===============================================================================
+' NAME
+'     palette - Tailwind CSS の配色を実物の色見本として一覧表示する
 '
-'   palette : PERSONAL.XLSB 内に一覧シートを作成 (既にあれば作り直す) し、表示する。
-'             セルの色は bg copy / bg paste でそのまま持ち出せる。
-'             Tailwind の22色相 × 11段階に加え、black / white も別枠で表示する。
+' SYNOPSIS
+'     palette
+'
+' DESCRIPTION
+'     PERSONAL.XLSB 内に Palette シートを作成 (既にあれば作り直す) して表示する。
+'     Tailwind の22色相 × 11段階に加え、black / white も別枠で表示する。
+'     各セルには amber500 のような HUE[STEP] トークンがそのまま入っているので、
+'     bg copy (bg c) でセルの色をコピーし、対象セルで bg paste (bg p) すれば、
+'     色名を覚えていなくても貼り付けられる。
+'
+' NOTES
+'     - LookupHex は Tailwind CSS v4 (MIT) の公開値 (oklch()) を、coloraide
+'       (MINDE-chroma = CSS Color 4 相当のガマットマッピング) で sRGB に変換した
+'       固定値。VBA 側での色計算は行わない。
 '
 ' COMPLETIONS
-'   palette         Tailwind 配色の一覧シートを表示
-'
-' NOTE
-'   このファイルの LookupHex は Tailwind CSS v4 (MIT) の公開値 (oklch()) を、
-'   coloraide (MINDE-chroma = CSS Color 4相当のガマットマッピング) で sRGB に変換した固定値。
-' =========================================================================================
+'     palette         Tailwind 配色の一覧シートを表示
+'===============================================================================
 
 Private Const SHEET_NAME As String = "Palette"
 
