@@ -2,21 +2,24 @@ Attribute VB_Name = "mPolygon"
 Option Explicit
 '===============================================================================
 ' NAME
-'     polygon - セルに書き込んだ番号の昇順に頂点を結び、多角形の図形を作成する
+'     polygon, box - 選択範囲から閉じた図形を作成する
 '
 ' SYNOPSIS
 '     polygon
+'     box
 '
 ' DESCRIPTION
-'     選択範囲内の、数値 (文字列としての数値でも可) が書き込まれたセルを対象に、
-'     値の昇順で各セル左上の頂点を結んだ閉じた多角形 (フリーフォーム図形) を
-'     作成する。線の太さは 0.5pt・線色は黒・塗りつぶしは白で作成される。
+'     polygon は、選択範囲内の数値 (文字列としての数値でも可) が書き込まれたセルを
+'     対象に、値の昇順で各セル左上の頂点を結んだ閉じた多角形 (フリーフォーム図形)
+'     を作成する。
+'     box は、選択範囲のセル境界に外接する矩形の図形を作成する。
+'     いずれも線の太さは 0.5pt・線色は黒・塗りつぶしは白で作成される。
 '
 ' NOTES
-'     - 数値以外 (空欄・IsNumeric が False の文字列など) のセルは無視する。
-'     - 同値のセルが複数ある場合は、シート走査順 (行→列) を維持する。
-'     - 対象セルが3個未満の場合は何もしない。
-'     - 複数領域の選択 (Ctrl+クリックなど) には対応しない。
+'     - polygon: 数値以外 (空欄・IsNumeric が False の文字列など) のセルは無視する。
+'     - polygon: 同値のセルが複数ある場合は、シート走査順 (行→列) を維持する。
+'     - polygon: 対象セルが3個未満の場合は何もしない。
+'     - polygon, box とも、複数領域の選択 (Ctrl+クリックなど) には対応しない。
 '===============================================================================
 
 Private Type PolyNode
@@ -50,7 +53,41 @@ Public Sub polygon()
 
     Dim shp As shape
     Set shp = BuildPolygonShape(ws, nodes, n)
+    ApplyShapeStyle shp
 
+    Application.StatusBar = "[polygon] " & n & " 頂点の多角形を作成しました。"
+    Exit Sub
+
+FINALLY:
+    Application.StatusBar = "[polygon] E" & Err.Number & ": " & Err.Description
+End Sub
+
+Public Sub box()
+    Dim booster As cBooster: Set booster = New cBooster
+    On Error GoTo FINALLY
+
+    If TypeName(Selection) <> "Range" Then Exit Sub
+    If Selection.Areas.Count > 1 Then
+        Application.StatusBar = "[box] 複数領域の選択には対応していません。"
+        Exit Sub
+    End If
+
+    Dim ws As Worksheet
+    Set ws = Selection.Worksheet
+
+    Dim shp As shape
+    Set shp = ws.Shapes.AddShape(msoShapeRectangle, Selection.Left, Selection.Top, Selection.Width, Selection.Height)
+    ApplyShapeStyle shp
+
+    Application.StatusBar = "[box] 矩形を作成しました。"
+    Exit Sub
+
+FINALLY:
+    Application.StatusBar = "[box] E" & Err.Number & ": " & Err.Description
+End Sub
+
+' polygon, box に共通の図形スタイル (線0.5pt・黒線・白塗り) を適用する。
+Private Sub ApplyShapeStyle(ByVal shp As shape)
     With shp
         .Fill.Visible = msoTrue
         .Fill.ForeColor.RGB = RGB(255, 255, 255)
@@ -58,12 +95,6 @@ Public Sub polygon()
         .line.ForeColor.RGB = RGB(0, 0, 0)
         .line.Weight = 0.5
     End With
-
-    Application.StatusBar = "[polygon] " & n & " 頂点の多角形を作成しました。"
-    Exit Sub
-
-FINALLY:
-    Application.StatusBar = "[polygon] E" & Err.Number & ": " & Err.Description
 End Sub
 
 ' 選択範囲から数値セルを収集し、セル左上座標と値を nodes に格納する。
