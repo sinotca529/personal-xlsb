@@ -8,9 +8,9 @@
 
 import os
 import struct
+import subprocess
 from pyopenvba import ExcelFile, VBAModuleKind
 
-PERSONAL_PATH = os.path.join(os.environ["APPDATA"], r"Microsoft\Excel\XLSTART\PERSONAL.XLSB")
 BUILD_DIR     = os.path.join(os.path.dirname(__file__), "build")
 NEW_PATH      = os.path.join(BUILD_DIR, "PERSONAL.xlsb")
 SRC_DIR       = os.path.join(os.path.dirname(__file__), "src")
@@ -94,14 +94,46 @@ def build_new(path):
         wb.save()
 
 
+
+def _appdata_dir():
+    """%APPDATA% のディレクトリを、実行中の Python から使えるパスで返す。
+
+    Windows ではそのまま環境変数を使う。WSL では Windows の環境変数が
+    引き継がれない (PATH と WSLENV 指定分のみ) ため、cmd.exe から取得して
+    wslpath で /mnt/c/... 形式へ変換する。
+    """
+    if os.name == "nt":
+        return os.environ["APPDATA"]
+    if "APPDATA" in os.environ and os.path.isdir(os.environ["APPDATA"]):
+        return os.environ["APPDATA"]  # WSLENV=APPDATA/p で渡された場合など
+    raw = subprocess.run(
+        ["cmd.exe", "/d", "/c", "echo %APPDATA%"],
+        capture_output=True, check=True, cwd="/mnt/c",
+    ).stdout
+    try:
+        win_path = raw.decode("cp932").strip()
+    except UnicodeDecodeError:
+        win_path = raw.decode("utf-8").strip()
+    if not win_path or win_path == "%APPDATA%":
+        raise RuntimeError("Windows 側の APPDATA を取得できませんでした")
+    return subprocess.run(
+        ["wslpath", "-u", win_path], capture_output=True, check=True, text=True,
+    ).stdout.strip()
+
+
+def personal_path():
+    return os.path.join(_appdata_dir(), "Microsoft", "Excel", "XLSTART", "PERSONAL.XLSB")
+
+
 def deploy(new_path, target_path):
     """新ファイルを本番パスへ移動する（既存ファイルは上書き）。"""
     os.replace(new_path, target_path)
 
 
 def main():
+    target = personal_path()
     build_new(NEW_PATH)
-    deploy(NEW_PATH, PERSONAL_PATH)
+    deploy(NEW_PATH, target)
 
 
 if __name__ == "__main__":

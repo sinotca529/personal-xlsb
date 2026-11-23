@@ -12,6 +12,7 @@ Excel の個人用マクロブック (`PERSONAL.XLSB`) を、VBA ソースから
 
 - `src/` 内の `.bas` / `.cls` をすべて読み込み、`build/PERSONAL.xlsb` を新規生成。
 - 生成後、`XLSTART` 配下の `PERSONAL.XLSB` を置き換える (Excel を終了させてから実行すること)。
+- Windows / WSL のどちらからでも実行できる。WSL では Windows 側の `%APPDATA%` を `cmd.exe` 経由で取得し、`/mnt/c/...` に変換して使う。
 
 ### エンコーディング
 
