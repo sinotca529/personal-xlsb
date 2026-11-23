@@ -2,12 +2,14 @@ Attribute VB_Name = "mLlp"
 ' =========================================================================================
 ' llp - Lightweight Linked Picture
 '
-'   llp insert     : LLP を挿入します。
-'   llp update     : LLP の描画を更新します。
-'   llp migrate    : 既存のリンクされた図をすべて LLP に置き換えます。
-'   llp clean      : 使われなくなった LLP 関連の名前を削除します。
-'   llp goto       : LLP の定義一にジャンプします。
-'   llp localize   : LLP 参照から外部ブック名を削除します。
+' COMPLETIONS
+'   llp             Lightweight Linked Picture
+'   llp insert      LLP を挿入します。
+'   llp update      LLP の描画を更新します。
+'   llp migrate     既存のリンクされた図をすべて LLP に置き換えます。
+'   llp clean       使われなくなった LLP 関連の名前を削除します。
+'   llp goto        LLP の定義一にジャンプします。
+'   llp localize    LLP 参照から外部ブック名を削除します。
 ' =========================================================================================
 
 Option Explicit

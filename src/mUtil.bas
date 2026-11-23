@@ -1,5 +1,19 @@
 Attribute VB_Name = "mUtil"
 Option Explicit
+'===============================================================================
+' NAME
+'     tb - 選択範囲に表の罫線を適用する
+'
+' SYNOPSIS
+'     tb headerRows
+'
+' DESCRIPTION
+'     ヘッダー下端の実線、データ行の破線区切り、データ列の実線区切り、
+'     外枠の実線を適用する。空欄行・空欄列は区切り線の対象から除外する。
+'
+' COMPLETIONS
+'     tb              表の罫線を適用
+'===============================================================================
 
 Public Sub tb(ByVal headerRows As Long)
     Dim booster As cBooster: Set booster = New cBooster

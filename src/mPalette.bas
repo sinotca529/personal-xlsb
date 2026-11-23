@@ -7,6 +7,9 @@ Option Explicit
 '             セルの色は bg copy / bg paste でそのまま持ち出せる。
 '             Tailwind の22色相 × 11段階に加え、black / white も別枠で表示する。
 '
+' COMPLETIONS
+'   palette         Tailwind 配色の一覧シートを表示
+'
 ' NOTE
 '   このファイルの LookupHex は Tailwind CSS v4 (MIT) の公開値 (oklch()) を、
 '   coloraide (MINDE-chroma = CSS Color 4相当のガマットマッピング) で sRGB に変換した固定値。

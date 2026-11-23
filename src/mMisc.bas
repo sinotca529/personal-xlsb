@@ -1,5 +1,21 @@
 Attribute VB_Name = "mMisc"
 Option Explicit
+'===============================================================================
+' NAME
+'     mg, mt - Excel 方眼紙の作成・テーブル風の罫線整形
+'
+' SYNOPSIS
+'     mg [SizePt]
+'     mt [headerRows]
+'
+' DESCRIPTION
+'     mg は全列・全行を SizePt (既定 20pt) 四方のマス目に揃える。
+'     mt は選択範囲に、ヘッダー行数 headerRows (既定 1) の縞模様の罫線を適用する。
+'
+' COMPLETIONS
+'     mg              Excel 方眼紙を作成
+'     mt              テーブル風の罫線を適用
+'===============================================================================
 
 Sub mg(Optional SizePt As Long = 20): MakeGrid (SizePt): End Sub
 Sub mt(Optional ByVal headerRows As Long = 1): MakeTable (headerRows): End Sub
