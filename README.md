@@ -33,6 +33,7 @@ Excel の個人用マクロブック (`PERSONAL.XLSB`) を、VBA ソースから
 | `mMisc` | `mg` | 選択列幅・行高をそろえて Excel 方眼紙を作成 |
 | `mMisc` | `mt` | 選択範囲に縞模様の罫線 (テーブル風の書式) を適用 |
 | `mUtil` | `tb` | 選択範囲にヘッダー行区切り・列区切りの罫線を適用 |
+| `mBorder` | `db` | 選択範囲の各セルから指定辺の罫線を消す |
 | `mView` | `fmt` | 全シートの表示位置を A1・ズーム 100% にリセット |
 | `mView` | `pbp` | 全シートを改ページプレビュー表示にし、目盛線を非表示に |
 | `mPolygon` | `polygon` | 数字セルを番号昇順に結んだ多角形の図形を作成 |
@@ -94,6 +95,18 @@ mt [headerRows]   ヘッダー行数を指定 (既定 1)。偶奇グループご
 tb headerRows     ヘッダー行数を指定 (必須)。単純な区切り検出版
 ```
 
+### `db` — 罫線を消す (`mBorder.bas`)
+
+選択範囲の各セルについて、指定した辺の罫線を個別に消す (選択範囲全体の外周ではなく、選択した全セルそれぞれの指定辺が対象)。
+
+```
+db SIDES   SIDES で指定した辺の罫線を選択範囲内の各セルから消す
+```
+
+- `SIDES` は `oprl` の部分文字列 (順不同・重複可)。Excel リボンの罫線メニュー ([Alt] H B の後のアクセスキー) に合わせて `o` = 下辺、`p` = 上辺、`r` = 右辺、`l` = 左辺。
+- 例: `db o` (下辺のみ)、`db pl` (上辺・左辺)、`db oprl` (全4辺)。
+- `oprl` 以外の文字は無視する。有効な文字が1つもない場合は何もしない。
+
 ### `polygon` — セル番号から多角形を作成 (`mPolygon.bas`)
 
 1. セルに数字 (文字列としての数字でも可) を書き込む。
@@ -129,6 +142,7 @@ src/           VBA ソース (.bas / .cls、UTF-8 / CRLF。文字種は cp932 �
   mLlp.bas       llp コマンド
   mMisc.bas      mg / mt コマンド
   mUtil.bas      tb コマンド
+  mBorder.bas    db コマンド
   mView.bas      fmt / pbp コマンド
   mPolygon.bas   polygon コマンド
 build/         ビルド成果物 (gitignore 対象)
