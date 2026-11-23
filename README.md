@@ -36,6 +36,7 @@ uv run build.py
 | `polygon` / `box`                   | 数字セルを結んだ多角形 / 選択範囲を囲む矩形を作成                                                 | [`mPolygon.bas`](src/mPolygon.bas)   |
 | `palette`                           | Tailwind 配色の一覧シートを表示                                                                   | [`mPalette.bas`](src/mPalette.bas)   |
 | `find` / `fn` / `fp` / `fq`         | セルと図形内のテキストをブック横断で検索し、`n` / `N` で順に移動                                  | [`mFind.bas`](src/mFind.bas)         |
+| `s`                                 | 選択範囲のセルと図形内のテキストを正規表現で置換 (`s/PAT/REP/g`)                                  | [`mSubst.bas`](src/mSubst.bas)       |
 | `md`                                | 選択範囲を Markdown の表としてクリップボードにコピー                                              | [`mMarkdown.bas`](src/mMarkdown.bas) |
 | `sort` / `uniq` / `hsort` / `huniq` | 選択範囲の行 (h: 列) を並べ替え / 重複を取り除く                                                  | [`mSort.bas`](src/mSort.bas)         |
 
