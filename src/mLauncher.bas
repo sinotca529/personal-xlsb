@@ -23,11 +23,16 @@ Option Private Module
 '         bg#ffcc00     → bg("#ffcc00")
 '     マクロ名は VBA の識別子に合わせ、英数字・_・. (Module.Macro 形式) から成る。
 '
+'     !! と入力すると、直前に成功したコマンドをもう一度実行する。
+'
 ' NOTES
 '     - PERSONAL.XLSB を開いたとき (Workbook_Open) に Ctrl+L を割り当てる。
 '     - Option Private Module のため、このモジュールのマクロは
 '       マクロ一覧 (Alt+F8) には表示されない。
 '===============================================================================
+
+' 直前に成功したコマンド (!! で繰り返す)
+Private gLastCmd As String
 
 '========================
 ' ショートカット
@@ -62,6 +67,15 @@ Public Sub TryRun(cmd As String)
     Dim a As Variant
     Dim m As String
     
+    ' 0. !! は直前に成功したコマンドの繰り返し
+    If Trim$(cmd) = "!!" Then
+        If Len(gLastCmd) = 0 Then
+            Application.StatusBar = "[launcher] No previous command."
+            Exit Sub
+        End If
+        cmd = gLastCmd
+    End If
+
     ' 1. 入力をマクロ名/引数のリストに分解する
     a = ParseCommand(cmd)
     If UBound(a) < 0 Then Exit Sub
@@ -87,7 +101,7 @@ Public Sub TryRun(cmd As String)
         End Select
         
         ' 正常終了
-        If Err.Number = 0 Then Exit Sub
+        If Err.Number = 0 Then gLastCmd = cmd: Exit Sub
         
         ' 実行時エラー
         ' マクロが見つからないときのエラー (1004) を無視する
