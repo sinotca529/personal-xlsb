@@ -6,7 +6,7 @@ Option Explicit
 '
 ' SYNOPSIS
 '     bg [ copy | c | paste | p | set COLOR | COLOR ]
-'     fg [ copy | c | paste | p | set COLOR | COLOR ]
+'     fg [ copy | c | paste | p | set COLOR | COLOR ] [START [END]]
 '     bo [ copy | c | paste | p | set COLOR | COLOR ]
 '
 ' DESCRIPTION
@@ -20,6 +20,15 @@ Option Explicit
 '     paste, p   コピー済みの色を選択範囲の全セル/全図形に適用。
 '     set COLOR  指定色をアクティブセル/先頭図形に設定。
 '     COLOR      set の短縮形。COLOR の形式は ARGUMENTS を参照。
+'
+'     fg のみ、COLOR の後に START END を続けると、アクティブセル内の
+'     START～END 区間 (両端の断片を含む) だけ文字色を変える (部分着色)。
+'         fg red500 [ ]        [ から ] までを赤にする
+'         fg set red500 [ ]    同上
+'     区間が複数あればすべて変更する。START が複数ある場合は END に最も近い
+'     ものを採用 (最短一致)。大文字・小文字は区別する。END を省略すると
+'     InputBox で入力する (空白を含む断片はこちらで指定)。
+'     数式セル・文字列以外のセル・図形は対象外。
 '
 ' ARGUMENTS
 '     COLOR は以下の形式が使用可能:
@@ -40,7 +49,8 @@ Option Explicit
 ' NOTES
 '     - スコープは auto。セル選択時はセルへ、図形選択時は図形へ操作する。
 '     - コピー用バッファは bg / fg / bo で独立 (Variant 番兵: Empty)。
-'     - fg は Range.Font / 図形テキストのフォント色を扱う。セル内の部分的な色は考慮しない。
+'     - fg は Range.Font / 図形テキストのフォント色を扱う。現在色の表示・copy では
+'       セル内の部分的な色は考慮しない。
 '     - ol は図形の枠線色のみ。セルの罫線は対象外。
 '     - すべてのメッセージやエラーはステータスバーに表示される。
 '===============================================================================
@@ -65,13 +75,14 @@ End Function
 ' エントリポイント
 '========================
 Public Sub bg(Optional a As String, Optional b As String): Dispatch "bg", a, b: End Sub
-Public Sub fg(Optional a As String, Optional b As String): Dispatch "fg", a, b: End Sub
+Public Sub fg(Optional a As String, Optional b As String, Optional c As String, Optional d As String): Dispatch "fg", a, b, c, d: End Sub
 Public Sub bo(Optional a As String, Optional b As String): Dispatch "bo", a, b: End Sub
 
 '========================
 ' 分岐専用ディスパッチャ
 '========================
-Private Sub Dispatch(ByVal target As String, Optional arg1 As String, Optional arg2 As String)
+Private Sub Dispatch(ByVal target As String, Optional arg1 As String, Optional arg2 As String, _
+                     Optional arg3 As String, Optional arg4 As String)
     Dim booster As cBooster: Set booster = New cBooster
     On Error GoTo FINALLY
 
@@ -81,8 +92,8 @@ Private Sub Dispatch(ByVal target As String, Optional arg1 As String, Optional a
         Case "": ShowCurrentColor target
         Case "copy", "c": DoCopy target
         Case "paste", "p": DoPaste target
-        Case "set", "s": DoSet target, arg2
-        Case Else: DoSet target, cmd
+        Case "set", "s": DoSet target, arg2, arg3, arg4
+        Case Else: DoSet target, cmd, arg2, arg3
     End Select
     Exit Sub
 
@@ -166,7 +177,8 @@ Private Sub DoPaste(ByVal target As String)
     Application.StatusBar = "[" & target & "] pasted: " & ColorLongToHex(CLng(GetCopiedColor(target)))
 End Sub
 
-Private Sub DoSet(ByVal target As String, ByVal token As String)
+Private Sub DoSet(ByVal target As String, ByVal token As String, _
+                  Optional ByVal startFrag As String, Optional ByVal endFrag As String)
     Dim sr As ShapeRange, c As Long, ok As Boolean, i As Long, applied As Long
 
     token = LCase$(Trim$(token))
@@ -176,6 +188,14 @@ Private Sub DoSet(ByVal target As String, ByVal token As String)
     If Not ok Then Application.StatusBar = "[" & target & "] Invalid color: " & token: Exit Sub
 
     On Error Resume Next: Set sr = Selection.ShapeRange: On Error GoTo 0
+
+    If Len(startFrag) > 0 Then
+        If target <> "fg" Or Not sr Is Nothing Then
+            Application.StatusBar = "[" & target & "] Fragments are supported only for fg on cells.": Exit Sub
+        End If
+        DoSetFragment c, startFrag, endFrag
+        Exit Sub
+    End If
 
     Select Case target & "," & CStr(Abs(Not sr Is Nothing))
         Case "bg,0"
@@ -211,6 +231,53 @@ Private Sub DoSet(ByVal target As String, ByVal token As String)
 
     Application.StatusBar = "[" & target & "] set: " & ColorLongToHex(c)
 End Sub
+
+' アクティブセル内の startFrag～endFrag 区間の文字色を c にする (fg の部分着色)
+Private Sub DoSetFragment(ByVal c As Long, ByVal startFrag As String, ByVal endFrag As String)
+    Dim cell As Range
+    Dim n As Long
+
+    Set cell = ActiveCell
+    If cell Is Nothing Then Application.StatusBar = "[fg] No active cell.": Exit Sub
+    If cell.HasFormula Or VarType(cell.Value) <> vbString Then
+        Application.StatusBar = "[fg] Active cell is not a text constant.": Exit Sub
+    End If
+
+    If Len(endFrag) = 0 Then endFrag = InputBox("終了の文字断片", "fg")
+    If Len(endFrag) = 0 Then Exit Sub
+
+    n = ColorBetween(cell, startFrag, endFrag, c)
+    Application.StatusBar = "[fg] " & n & " span(s) set: " & ColorLongToHex(c)
+End Sub
+
+' cell の文字列中の startFrag～endFrag 区間 (最短一致) を fgColor で塗り、塗った区間数を返す
+Private Function ColorBetween(ByVal cell As Range, ByVal startFrag As String, ByVal endFrag As String, ByVal fgColor As Long) As Long
+    Dim text As String
+    Dim pos As Long
+    Dim s As Long
+    Dim e As Long
+
+    text = CStr(cell.Value)
+    pos = 1
+
+    Do
+        ' まず開始断片を探す
+        s = InStr(pos, text, startFrag, vbBinaryCompare)
+        If s = 0 Then Exit Do
+
+        ' その後ろで最初に現れる終了断片を探す
+        e = InStr(s + Len(startFrag), text, endFrag, vbBinaryCompare)
+        If e = 0 Then Exit Do
+
+        ' 終了断片の直前にある最後の開始断片まで寄せる (最短一致)
+        s = InStrRev(Left$(text, e - 1), startFrag, -1, vbBinaryCompare)
+
+        cell.Characters(s, e + Len(endFrag) - s).Font.Color = fgColor
+        ColorBetween = ColorBetween + 1
+
+        pos = e + Len(endFrag)
+    Loop
+End Function
 
 Private Sub ShowCurrentColor(ByVal target As String)
     Dim c As Long
