@@ -24,16 +24,17 @@ uv run build.py
 
 各コマンドの詳しい使い方は、ソースの先頭コメント (NAME / SYNOPSIS / DESCRIPTION) に書いてある。
 
-| コマンド           | 概要                                                                                              | ソース                             |
-| ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `bg` / `fg` / `bo` | 塗り色 / 文字色 / 図形の枠線色を取得・コピー・貼り付け・設定                                      | [`mColor.bas`](src/mColor.bas)     |
-| `llp`              | 軽量リンク画像の挿入・更新・移行・整理 ([参考](https://zenn.dev/sinotca/articles/18638886a004d4)) | [`mLlp.bas`](src/mLlp.bas)         |
-| `mg` / `mt`        | Excel 方眼紙の作成 / テーブル風の罫線                                                             | [`mMisc.bas`](src/mMisc.bas)       |
-| `tb`               | 表の罫線                                                                                          | [`mUtil.bas`](src/mUtil.bas)       |
-| `db`               | 選択範囲の各セルから指定辺の罫線を消す                                                            | [`mBorder.bas`](src/mBorder.bas)   |
-| `fmt` / `pbp`      | 全シートの表示をリセット / 改ページプレビューに                                                   | [`mView.bas`](src/mView.bas)       |
-| `polygon` / `box`  | 数字セルを結んだ多角形 / 選択範囲を囲む矩形を作成                                                 | [`mPolygon.bas`](src/mPolygon.bas) |
-| `palette`          | Tailwind 配色の一覧シートを表示                                                                   | [`mPalette.bas`](src/mPalette.bas) |
+| コマンド                            | 概要                                                                                              | ソース                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `bg` / `fg` / `bo`                  | 塗り色 / 文字色 / 図形の枠線色を取得・コピー・貼り付け・設定                                      | [`mColor.bas`](src/mColor.bas)     |
+| `llp`                               | 軽量リンク画像の挿入・更新・移行・整理 ([参考](https://zenn.dev/sinotca/articles/18638886a004d4)) | [`mLlp.bas`](src/mLlp.bas)         |
+| `mg` / `mt`                         | Excel 方眼紙の作成 / テーブル風の罫線                                                             | [`mMisc.bas`](src/mMisc.bas)       |
+| `tb`                                | 表の罫線                                                                                          | [`mUtil.bas`](src/mUtil.bas)       |
+| `db`                                | 選択範囲の各セルから指定辺の罫線を消す                                                            | [`mBorder.bas`](src/mBorder.bas)   |
+| `fmt` / `pbp`                       | 全シートの表示をリセット / 改ページプレビューに                                                   | [`mView.bas`](src/mView.bas)       |
+| `polygon` / `box`                   | 数字セルを結んだ多角形 / 選択範囲を囲む矩形を作成                                                 | [`mPolygon.bas`](src/mPolygon.bas) |
+| `palette`                           | Tailwind 配色の一覧シートを表示                                                                   | [`mPalette.bas`](src/mPalette.bas) |
+| `sort` / `uniq` / `hsort` / `huniq` | 選択範囲の行 (h: 列) を並べ替え / 重複を取り除く                                                  | [`mSort.bas`](src/mSort.bas)       |
 
 ## 開発メモ
 
