@@ -84,20 +84,27 @@ Public Function CP_ListCandidates(ByVal query As String) As Collection
 
     Dim ctx As String
     Dim prefix As String
+    Dim p As Long
 
     CP_GetContextAndPrefix query, ctx, prefix
 
     Set CP_ListCandidates = New Collection
     CP_LoadCompletions
 
-    If Not CP_Map.Exists(ctx) Then
-        Exit Function
-    End If
+    ' 文脈が表にない場合 (例: "ln 2 da" の "ln 2") は、末尾のトークンを落として
+    ' 登録済みの文脈 ("ln") を探す。順不同に引数を並べるコマンドでも補完が効くように。
+    ' コマンド名だけの文脈まで遡っても無ければ諦める (トップレベルには戻らない)
+    Do While Not CP_Map.Exists(ctx)
+        p = InStrRev(ctx, " ")
+        If p = 0 Then Exit Function
+        ctx = Left$(ctx, p - 1)
+    Loop
 
+    ' 前方一致は Like だと [ # * ? が特殊文字になるため、先頭の文字列で比較する
     Set c = CP_Map(ctx)
     For i = 1 To c.Count
         pair = c(i)
-        If prefix = "" Or LCase$(CStr(pair(0))) Like LCase$(prefix) & "*" Then
+        If StrComp(Left$(CStr(pair(0)), Len(prefix)), prefix, vbTextCompare) = 0 Then
             CP_ListCandidates.Add pair
         End If
     Next i
