@@ -9,6 +9,7 @@
 import os
 import struct
 import subprocess
+import zipfile
 from pyopenvba import ExcelFile, VBAModuleKind
 
 BUILD_DIR     = os.path.join(os.path.dirname(__file__), "build")
@@ -93,6 +94,55 @@ def build_new(path):
 
         wb.save()
 
+    _hide_workbook_window(path)
+
+
+# BrtBookView (MS-XLSB 2.4.304) のレコード種別と、fHidden フラグの位置
+_BRT_BOOK_VIEW = 158
+_BOOK_VIEW_FLAGS_OFFSET = 28  # xWn..itabCur (4byte x 7) の直後の 1byte
+_BOOK_VIEW_FHIDDEN = 0x01
+
+
+def _read_varint(buf, i, max_bytes):
+    value = 0
+    for n in range(max_bytes):
+        b = buf[i]
+        i += 1
+        value |= (b & 0x7F) << (7 * n)
+        if not b & 0x80:
+            break
+    return value, i
+
+
+def _hide_workbook_window(path):
+    """xl/workbook.bin の全 BrtBookView に fHidden を立て、ウィンドウを非表示にする。
+
+    create_new() のテンプレートは通常のブック (ウィンドウ表示) なので、
+    そのまま PERSONAL.XLSB にすると Excel 起動時に表に出てしまう。
+    """
+    with zipfile.ZipFile(path) as zin:
+        infos = zin.infolist()
+        data = {info.filename: zin.read(info) for info in infos}
+
+    buf = bytearray(data["xl/workbook.bin"])
+    i = 0
+    patched = 0
+    while i < len(buf):
+        rec_type, i = _read_varint(buf, i, 2)
+        rec_size, i = _read_varint(buf, i, 4)
+        if rec_type == _BRT_BOOK_VIEW and rec_size > _BOOK_VIEW_FLAGS_OFFSET:
+            buf[i + _BOOK_VIEW_FLAGS_OFFSET] |= _BOOK_VIEW_FHIDDEN
+            patched += 1
+        i += rec_size
+    if patched == 0:
+        raise RuntimeError("BrtBookView record not found in xl/workbook.bin")
+    data["xl/workbook.bin"] = bytes(buf)
+
+    tmp = path + ".tmp"
+    with zipfile.ZipFile(tmp, "w") as zout:
+        for info in infos:
+            zout.writestr(info, data[info.filename])
+    os.replace(tmp, path)
 
 
 def _appdata_dir():
