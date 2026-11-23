@@ -2,7 +2,6 @@ Attribute VB_Name = "mMisc"
 Option Explicit
 
 Sub mg(Optional SizePt As Long = 20): MakeGrid (SizePt): End Sub
-Sub rv(): ResetView: End Sub
 Sub mt(Optional ByVal headerRows As Long = 1): MakeTable (headerRows): End Sub
 
 
@@ -21,28 +20,6 @@ Public Sub MakeGrid(Optional SizePt As Long = 20)
 FINALLY:
     Application.StatusBar = "[mg] E" & Err.Number & ": " & Err.Description
 End Sub
-
-' 全シート A1 を選択し、縮尺 100% に。
-Sub ResetView()
-    Dim booster As cBooster: Set booster = New cBooster
-    On Error GoTo FINALLY
-
-    Dim ws As Worksheet
-    For Each ws In ActiveWorkbook.Worksheets
-        If ws.Type = xlWorksheet Then
-            ws.Activate
-            ActiveWindow.Zoom = 100
-            Application.Goto ws.Range("A1"), True
-        End If
-    Next ws
-
-    ActiveWorkbook.Worksheets(1).Activate
-    Exit Sub
-
-FINALLY:
-    Application.StatusBar = "[rv] E" & Err.Number & ": " & Err.Description
-End Sub
-
 
 Public Sub MakeTable(Optional ByVal headerRows As Long = 1)
     Dim booster As cBooster: Set booster = New cBooster

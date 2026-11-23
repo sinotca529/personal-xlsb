@@ -31,9 +31,10 @@ Excel の個人用マクロブック (`PERSONAL.XLSB`) を、VBA ソースから
 | `mColor` | `bo` | 図形の**枠線色**を取得・コピー・貼り付け・設定 (セル罫線は対象外) |
 | `mLlp` | `llp` | 数式で参照範囲を保持する「軽量リンク画像」の挿入・更新・移行・整理 |
 | `mMisc` | `mg` | 選択列幅・行高をそろえて Excel 方眼紙を作成 |
-| `mMisc` | `rv` | 全シートの表示位置を A1・ズーム 100% にリセット |
 | `mMisc` | `mt` | 選択範囲に縞模様の罫線 (テーブル風の書式) を適用 |
 | `mUtil` | `tb` | 選択範囲にヘッダー行区切り・列区切りの罫線を適用 |
+| `mView` | `fmt` | 全シートの表示位置を A1・ズーム 100% にリセット |
+| `mView` | `pbp` | 全シートを改ページプレビュー表示にし、目盛線を非表示に |
 | `mPolygon` | `polygon` | 数字セルを番号昇順に結んだ多角形の図形を作成 |
 | `mPalette` | `palette` | Tailwind配色の全一覧をシートに表示するガイド |
 
@@ -77,10 +78,11 @@ llp localize | l   LLP 参照式から外部ブック名の修飾を削除
 mg [SizePt]   全列・全行を SizePt (既定 20pt) 四方のマス目に揃える
 ```
 
-### `rv` — 表示リセット (`mMisc.bas`)
+### `fmt` / `pbp` — 表示切替 (`mView.bas`)
 
 ```
-rv            全シートを A1 選択・ズーム 100% にし、先頭シートをアクティブ化
+fmt           全シートを A1 選択・ズーム 100% にし、先頭シートをアクティブ化
+pbp           全シートを改ページプレビュー表示にし、目盛線を非表示にする
 ```
 
 ### `mt` / `tb` — 表の罫線整形 (`mMisc.bas` / `mUtil.bas`)
@@ -125,8 +127,9 @@ src/           VBA ソース (.bas / .cls、UTF-8 / CRLF。文字種は cp932 �
   mColorUtil.bas 色パースユーティリティ (HUE[STEP] トークンの解決)
   mPalette.bas   Tailwind CSS 配色テーブル・palette コマンド
   mLlp.bas       llp コマンド
-  mMisc.bas      mg / rv / mt コマンド
+  mMisc.bas      mg / mt コマンド
   mUtil.bas      tb コマンド
+  mView.bas      fmt / pbp コマンド
   mPolygon.bas   polygon コマンド
 build/         ビルド成果物 (gitignore 対象)
 ```
