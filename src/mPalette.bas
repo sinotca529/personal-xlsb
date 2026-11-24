@@ -8,7 +8,8 @@ Option Explicit
 '     palette
 '
 ' DESCRIPTION
-'     PERSONAL.XLSB 内に Palette シートを作成 (既にあれば作り直す) して表示する。
+'     アクティブブックに Palette シートを作成 (既にあれば作り直す) して表示する。
+'     ブックが開かれていなければ新規ブックを作成する。
 '     Tailwind の22色相 × 11段階に加え、black / white も別枠で表示する。
 '     各セルには amber500 のような HUE[STEP] トークンがそのまま入っているので、
 '     bg copy (bg c) でセルの色をコピーし、対象セルで bg paste (bg p) すれば、
@@ -29,11 +30,14 @@ Public Sub palette()
     Dim booster As cBooster: Set booster = New cBooster
     On Error GoTo FINALLY
 
+    Dim wb As Workbook
+    Set wb = ActiveWorkbook
+    If wb Is Nothing Then Set wb = Workbooks.Add
+
     Dim ws As Worksheet
-    Set ws = GetOrCreatePaletteSheet()
+    Set ws = GetOrCreatePaletteSheet(wb)
     FillPaletteSheet ws
 
-    ThisWorkbook.Windows(1).Visible = True
     ws.Activate
     Exit Sub
 
@@ -41,14 +45,14 @@ FINALLY:
     Application.StatusBar = "[palette] E" & Err.Number & ": " & Err.Description
 End Sub
 
-Private Function GetOrCreatePaletteSheet() As Worksheet
+Private Function GetOrCreatePaletteSheet(ByVal wb As Workbook) As Worksheet
     Dim ws As Worksheet
     On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(SHEET_NAME)
+    Set ws = wb.Worksheets(SHEET_NAME)
     On Error GoTo 0
 
     If ws Is Nothing Then
-        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        Set ws = wb.Worksheets.Add(After:=wb.Sheets(wb.Sheets.Count))
         ws.name = SHEET_NAME
     End If
 
