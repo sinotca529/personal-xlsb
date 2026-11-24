@@ -86,8 +86,8 @@ FINALLY:
     Application.StatusBar = "[md] E" & Err.Number & ": " & Err.Description
 End Sub
 
-' 表示どおりの文字列。列幅不足で ### になっている場合は値をそのまま使う
-Private Function CellText(ByVal cell As Range) As String
+' 表示どおりの文字列。列幅不足で ### になっている場合は値をそのまま使う (html でも使う)
+Public Function CellText(ByVal cell As Range) As String
     Dim t As String
     t = cell.text
     If Len(t) > 0 And Replace(t, "#", "") = "" And Not IsError(cell.Value2) Then
