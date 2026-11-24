@@ -5,8 +5,12 @@ Option Private Module
 Private Declare PtrSafe Function FindWindowA Lib "user32" ( _
     ByVal lpClassName As String, _
     ByVal lpWindowName As String _
-) As Long
+) As LongPtr
 
+' GetWindowLongPtrA / SetWindowLongPtrA は 64bit 版 user32.dll にしか存在しない
+' (32bit 版ではヘッダ上のマクロで GetWindowLongA / SetWindowLongA に置き換わる) ため、
+' 32bit 版 Office では呼び出し先を切り替える。
+#If Win64 Then
 Private Declare PtrSafe Function GetWindowLongPtrA Lib "user32" ( _
     ByVal hWnd As LongPtr, _
     ByVal nIndex As Long _
@@ -17,6 +21,18 @@ Private Declare PtrSafe Function SetWindowLongPtrA Lib "user32" ( _
     ByVal nIndex As Long, _
     ByVal dwNewLong As LongPtr _
 ) As LongPtr
+#Else
+Private Declare PtrSafe Function GetWindowLongPtrA Lib "user32" Alias "GetWindowLongA" ( _
+    ByVal hWnd As LongPtr, _
+    ByVal nIndex As Long _
+) As LongPtr
+
+Private Declare PtrSafe Function SetWindowLongPtrA Lib "user32" Alias "SetWindowLongA" ( _
+    ByVal hWnd As LongPtr, _
+    ByVal nIndex As Long, _
+    ByVal dwNewLong As LongPtr _
+) As LongPtr
+#End If
 
 Private Declare PtrSafe Function SetLayeredWindowAttributes Lib "user32" ( _
     ByVal hWnd As LongPtr, _
