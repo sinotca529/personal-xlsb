@@ -1,3 +1,5 @@
 * text=auto eol=lf
 
 /src/** text eol=crlf
+/tests/vba/** text eol=crlf
+/tests/fakes/** text eol=crlf

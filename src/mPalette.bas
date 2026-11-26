@@ -136,8 +136,8 @@ End Function
 ' 配色テーブル (Tailwind CSS v4 より変換)
 ' =====================
 
-Public Function LookupHex(ByVal name As String, ByVal step As String) As String
-    Select Case name & "-" & step
+Public Function LookupHex(ByVal hue As String, ByVal lvl As String) As String
+    Select Case hue & "-" & lvl
         ' red
         Case "red-50": LookupHex = "fef2f2"
         Case "red-100": LookupHex = "ffe2e2"
