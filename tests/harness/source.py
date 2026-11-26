@@ -6,8 +6,11 @@ VBA の .bas / .cls は、そのままでは LibreOffice Basic のモジュー�
   * VBE 固有のヘッダ行 (Attribute VB_*, VERSION 1.0 CLASS, BEGIN/END/MultiUse) を除去
   * .cls には Option ClassModule を付与 (LibreOffice でクラスモジュールとして扱わせる)
   * 全モジュールに Option VBASupport 1 を付与 (Excel の VBA 方言・定数を有効化)
+  * Declare 文の PtrSafe を除去 (LibreOffice Basic は PtrSafe を解釈できず、
+    #If で分岐させてもモジュールごとコンパイルに失敗する。Declare と LongPtr は通る)
 
-だけを行う。コードの本文には一切手を入れない。
+だけを行う。それ以外のコードの本文には手を入れない。Win32 API は Linux では
+呼べないので、Declare した関数を呼ぶ経路はテストしない。
 """
 
 import pathlib
@@ -33,6 +36,14 @@ _PROBE_SRC = (
 ).format(name=PROBE_NAME, ok=PROBE_OK)
 
 
+# Declare 文の PtrSafe。Declare の直後に来る (Private/Public Declare PtrSafe Function ...)
+_PTRSAFE = re.compile(r"^(\s*(?:(?:Private|Public)\s+)?Declare\s+)PtrSafe\s+", re.IGNORECASE | re.MULTILINE)
+
+
+def strip_ptrsafe(code):
+    return _PTRSAFE.sub(r"\1", code)
+
+
 def strip_vbe_header(code):
     return "\n".join(l for l in code.splitlines() if not _VBE_HEADER.match(l))
 
@@ -48,7 +59,7 @@ def read_source(path):
 
 def to_basic_module(path, with_probe=True):
     path = pathlib.Path(path)
-    code = strip_vbe_header(read_source(path)).replace("\r\n", "\n")
+    code = strip_ptrsafe(strip_vbe_header(read_source(path)).replace("\r\n", "\n"))
     prologue = "Option VBASupport 1\n"
     if path.suffix.lower() == ".cls":
         # LibreOffice ではクラスモジュールも通常モジュールとして格納されるため、

@@ -49,7 +49,7 @@ Public Function SetClipboardHtml(ByVal fragment As String, ByVal plainText As St
     fmt = RegisterClipboardFormatW(StrPtr("HTML Format"))
     If fmt = 0 Then Exit Function
 
-    data = CfHtml(fragment)
+    BuildCfHtml fragment, data
     hHtml = AllocBytes(data)
     If hHtml = 0 Then Exit Function
     hText = AllocUnicode(plainText)
@@ -108,8 +108,9 @@ Private Function AllocBytes(ByRef data() As Byte) As LongPtr
     AllocBytes = hMem
 End Function
 
-' CF_HTML の書式 (ヘッダーに UTF-8 のバイト位置を書いた HTML) にした、NUL 終端の UTF-8
-Private Function CfHtml(ByVal fragment As String) As Byte()
+' CF_HTML の書式 (ヘッダーに UTF-8 のバイト位置を書いた HTML) にした、NUL 終端の UTF-8 を data に入れる。
+' (Byte() を返す Function にしないのは、LibreOffice Basic がコンパイルできずテストできないため)
+Private Sub BuildCfHtml(ByVal fragment As String, ByRef data() As Byte)
     Dim pre As String, post As String, header As String
     Dim startHtml As Long, startFrag As Long, endFrag As Long, endHtml As Long
 
@@ -123,8 +124,8 @@ Private Function CfHtml(ByVal fragment As String) As Byte()
     endHtml = endFrag + Utf8Length(post)
     header = CfHtmlHeader(startHtml, endHtml, startFrag, endFrag)
 
-    CfHtml = ToUtf8(header & pre & fragment & post)
-End Function
+    ToUtf8 header & pre & fragment & post, data
+End Sub
 
 Private Function CfHtmlHeader(ByVal startHtml As Long, ByVal endHtml As Long, _
                               ByVal startFrag As Long, ByVal endFrag As Long) As String
@@ -140,13 +141,11 @@ Private Function Utf8Length(ByVal s As String) As Long
     Utf8Length = WideCharToMultiByte(CP_UTF8, 0, StrPtr(s), Len(s), 0, 0, 0, 0)
 End Function
 
-' UTF-8 に変換し、末尾に NUL を1バイト付ける
-Private Function ToUtf8(ByVal s As String) As Byte()
+' UTF-8 に変換し、末尾に NUL を1バイト付けて data に入れる
+Private Sub ToUtf8(ByVal s As String, ByRef data() As Byte)
     Dim n As Long
-    Dim data() As Byte
 
     n = Utf8Length(s)
-    ReDim data(0 To n) ' data(n) は NUL (Byte 配列は 0 で初期化される)
+    ReDim data(0 To n) ' data(n) は NUL (ReDim で 0 に初期化される)
     If n > 0 Then WideCharToMultiByte CP_UTF8, 0, StrPtr(s), Len(s), VarPtr(data(0)), n, 0, 0
-    ToUtf8 = data
-End Function
+End Sub
