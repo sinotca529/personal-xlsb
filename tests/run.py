@@ -153,14 +153,49 @@ def run(compile_only=False):
                             got="ok", want="ok"))
 
     book.close()
+    # テストの後に行う (別のドキュメントを開くと ActiveWorkbook が変わるため)
+    results += check_real_win32(office)
     office.stop()
     return results
+
+
+def check_real_win32(office):
+    """偽物に差し替えた本物の Win32 モジュールを確かめる。
+
+    - 偽物が本物の公開手続きをすべて持っているか (差し替えても呼び出し側が壊れないか)
+    - 本物の構文 (PtrSafe を取り除いて別のドキュメントでコンパイルする)
+
+    LibreOffice は未宣言の変数や手続き名の誤りを実行するまで報告しないので、
+    本物について分かるのは構文 (ブロックの対応、Declare や #If の書式) までになる。
+    """
+    out = []
+    mismatches = source.fake_api_mismatches()
+    for name in source.fake_names():
+        missing = mismatches.get(name)
+        out.append(dict(kind="FAIL" if missing else "PASS", module="Win32 (本物と偽物)",
+                        desc="{}: 偽物が本物の公開手続きをすべて持つ".format(name),
+                        got=", ".join(missing) if missing else "ok", want="ok"))
+
+    # 壊れたモジュールはライブラリ全体を道連れにするので、1 モジュールずつ別のドキュメントで確かめる
+    real = source.load_real_win32_modules()
+    for name in sorted(real):
+        book = office.new_workbook()
+        book.install({name: real[name]})
+        ok = not compile_check(book, [name])
+        book.close()
+        out.append(dict(kind="PASS" if ok else "FAIL", module="Win32 (本物と偽物)",
+                        desc="{}: 本物の構文が正しい (PtrSafe を除いてコンパイル)".format(name),
+                        got="ok" if ok else "(コンパイル不可)", want="ok"))
+    return out
 
 
 def bisect(module_name):
     """モジュールを手続き単位で切り詰めて、どこでコンパイルが壊れるか探す。"""
     path = next(p for p in source.SRC_DIR.iterdir() if p.stem == module_name)
-    lines = source.strip_vbe_header(source.read_source(path)).replace("\r\n", "\n").split("\n")
+    code = source.strip_vbe_header(source.read_source(path)).replace("\r\n", "\n")
+    if module_name in source.fake_names():
+        code = source.strip_ptrsafe(code)  # 本物の Win32 モジュールは構文確認と同じ条件で調べる
+    lines = code.split("\n")
     cuts = [i + 1 for i, l in enumerate(lines)
             if re.match(r"^(End Sub|End Function)\s*$", l) or re.match(r"^\s*(Public |Private )?Sub .*End Sub\s*$", l)]
 

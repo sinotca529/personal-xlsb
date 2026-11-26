@@ -1,10 +1,11 @@
 Attribute VB_Name = "Test_mHtml"
 Option Explicit
 '===============================================================================
-' html の表組み立て (mHtml.TableHtml) のテスト。
+' html のテスト。表の組み立て (mHtml.TableHtml) と、コマンド全体 (mHtml.html)。
 '
-' クリップボードへの書き込み (Win32 API) は Linux では動かないので、TableHtml が
-' 返す HTML のソースを調べる。LibreOffice では次の値を読み戻せないため検証しない
+' クリップボードは偽物 (tests/fakes/mClipboard.bas) に差し替わっていて、書き込もうとした
+' 内容を mClipboard.LastHtml / LastText で読める。
+' LibreOffice では次の値を読み戻せないため検証しない
 ' (docs/TESTING.md の「再現度の限界」)。
 '   - 罫線の種類 (LineStyle は常に xlContinuous)
 '   - 横位置 (HorizontalAlignment は Nothing)
@@ -114,6 +115,30 @@ Public Sub Run()
     h = mHtml.TableHtml(ws.Range("A12"))
     TestLib.IsTrue "行の高さを pt で書く", InStr(h, "<tr style=""height:30pt"">") > 0
     TestLib.IsTrue "列幅を pt で書く", InStr(h, "<col style=""width:" & Trim$(Str$(Round(ws.Columns(1).Width, 2))) & "pt"">") > 0
+
+    ' ---- コマンド全体: 選択範囲をクリップボードへ ----
+    mClipboard.Reset
+    ' (改行を含むセルがあると、LibreOffice がコマンドの後で行の高さを変えるので避ける)
+    ws.Range("D1:H1").Select
+    mHtml.html
+    h = mHtml.TableHtml(ws.Range("D1:H1"))
+    TestLib.Eq "html: HTML 形式で表を書き込む", mClipboard.LastHtml(), h
+    TestLib.Eq "html: テキスト形式には HTML のソースを書き込む", mClipboard.LastText(), h
+    TestLib.Eq "html: 書き込みは 1 回", mClipboard.CallCount(), 1
+
+    ' 行がすべて非表示の選択範囲では書き込まない
+    mClipboard.Reset
+    ws.Rows(9).Hidden = True
+    ws.Range("A9:C9").Select
+    mHtml.html
+    TestLib.Eq "html: すべて非表示なら書き込まない", mClipboard.CallCount(), 0
+    ws.Rows(9).Hidden = False
+
+    ' 使用範囲の外だけを選んだら書き込まない
+    mClipboard.Reset
+    ws.Range("Z100").Select
+    mHtml.html
+    TestLib.Eq "html: 空の選択範囲では書き込まない", mClipboard.CallCount(), 0
 End Sub
 
 Private Function CountOf(ByVal s As String, ByVal sub_ As String) As Long

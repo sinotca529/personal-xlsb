@@ -28,11 +28,35 @@ doc.setPropertyValue("VBACompatibilityMode", True)
 
 1. `src/*.bas` `*.cls` を読み、VBE 固有のヘッダ (`Attribute VB_*` など) を落として
    `Option VBASupport 1` (クラスは `Option ClassModule` も) を付ける。
-   `Declare` 文の `PtrSafe` も取り除く (後述)。**それ以外のコード本文には手を入れない。**
+   **コード本文には手を入れない。**
 2. ヘッドレスの `soffice` を起動し、UNO ソケット越しに接続する。
 3. VBA 互換モードの Calc ドキュメントを開き、`src` と `tests/vba` の全モジュールを入れる。
+   Win32 API を使うモジュールは、`tests/fakes/` の偽物に差し替える (後述)。
 4. **モジュールごとにコンパイル確認**する (後述)。
 5. `tests/vba/Test_*.bas` の `Run` を順に呼び、結果を集計する。
+6. Win32 API を使う本物のモジュールを確かめる (後述)。
+
+## Win32 API を使うモジュールは偽物に差し替える
+
+`Declare` で Win32 API を呼ぶのは `mClipboard` / `mIme` / `mLauncherFormUtil` だけで、
+どれも API を薄く包んだモジュールになっている。Linux では API を呼べないので、テストでは
+同じ名前・同じ公開手続きを持つ偽物 (`tests/fakes/<モジュール名>.bas`) を代わりに入れる。
+偽物を置くだけで差し替わる。
+
+- `mClipboard` の偽物は書き込もうとした内容を覚えておく。テストからは
+  `mClipboard.Reset` で消し、`LastText` / `LastHtml` / `CallCount` で調べる
+  (`Test_mMarkdown.bas` / `Test_mHtml.bas` が例)。
+- `mIme` / `mLauncherFormUtil` の偽物は何もしない。
+
+LibreOffice は他のモジュールの手続きを実行時に解決するので、偽物に差し替えても
+呼び出し側のモジュールはそのままコンパイルできる。
+
+本物のモジュールについては、ランナーが次の 2 つを確かめる。
+
+1. **偽物が本物の公開手続きをすべて持つか。** 本物に手続きを足したのに偽物に足し忘れると失敗する。
+2. **本物の構文が正しいか。** `Declare` 文の `PtrSafe` を取り除き (下の「4. コンパイルできない構文」)、
+   1 モジュールずつ別のドキュメントでコンパイルする。LibreOffice は未宣言の変数や手続き名の
+   誤りを実行するまで報告しないので、分かるのはブロックの対応や `Declare` / `#If` の書式までになる。
 
 ## テストの書き方
 
@@ -81,7 +105,7 @@ ViewShell が作られず `Object variable not set (91)` になる。`--headless
 
 | 構文 | 対処 |
 | --- | --- |
-| `Declare PtrSafe` (`#If VBA7` などで分岐させても不可) | ランナーが読み込み時に `PtrSafe` を取り除く (`tests/harness/source.py`)。`Declare` と `LongPtr` はそのまま通る。Win32 API は Linux では呼べないので、`Declare` した関数を呼ぶ経路はテストしない |
+| `Declare PtrSafe` (`#If VBA7` などで分岐させても不可) | テストでは偽物に差し替えるので問題にならない。本物の構文確認のときだけ、ランナーが `PtrSafe` を取り除く (`tests/harness/source.py`)。`Declare` と `LongPtr` はそのまま通る。64bit 版 Excel では `PtrSafe` がないと動かないので、`src/` からは消さない |
 | 戻り値が `Byte()` の `Function` | `src/` 側で `ByRef data() As Byte` の引数で受け渡す (`mClipboard.BuildCfHtml`) |
 
 ### 5. 結果の文字列に改行やタブを含めてよい
