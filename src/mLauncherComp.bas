@@ -6,9 +6,14 @@ Option Private Module
 ' 書式 (1行1項目):
 '     [CONTEXT]      以降の項目の文脈 (直前までに入力済みのトークン列)。空なら先頭トークン
 '     TOKEN : DESC   候補とその説明
+'     @Module.Func   候補を作る関数 (入力のたびに変わる候補。シート名など)
 '     ; ...          コメント
+'
+' 候補を作る関数は、入力中のトークンを受け取り、Array(候補, 説明) の配列を表示順に返す。
+' 絞り込みと並べ替えは関数の責任で、ここでは返ってきたものをそのまま使う。
 
-Private CP_Map As Object   ' Scripting.Dictionary
+Private CP_Map As Object        ' Scripting.Dictionary: 文脈 -> Collection (候補と説明の組)
+Private CP_Providers As Object  ' Scripting.Dictionary: 文脈 -> "Module.Func"
 
 '-------------------------
 ' 公開API
@@ -23,6 +28,7 @@ Public Sub CP_LoadCompletions()
     If Not CP_Map Is Nothing Then Exit Sub
 
     Set CP_Map = CreateObject("Scripting.Dictionary")
+    Set CP_Providers = CreateObject("Scripting.Dictionary")
     ctx = ""
 
     lines = Split(mLauncherCompData.CompletionText(), vbLf)
@@ -37,6 +43,10 @@ Public Sub CP_LoadCompletions()
             Case line Like "[[]*[]]"
                 ctx = CollapseSpaces(Mid$(line, 2, Len(line) - 2))
                 If Not CP_Map.Exists(ctx) Then CP_Map.Add ctx, New Collection
+
+            Case line Like "@*"
+                If Not CP_Map.Exists(ctx) Then CP_Map.Add ctx, New Collection
+                CP_Providers(ctx) = Mid$(line, 2)
 
             Case Else
                 ParseLineToTokenDesc line, tok, desc
@@ -100,6 +110,11 @@ Public Function CP_ListCandidates(ByVal query As String) As Collection
         ctx = Left$(ctx, p - 1)
     Loop
 
+    If CP_Providers.Exists(ctx) Then
+        AddProvidedCandidates CP_ListCandidates, CP_Providers(ctx), prefix
+        Exit Function
+    End If
+
     ' 前方一致は Like だと [ # * ? が特殊文字になるため、先頭の文字列で比較する
     Set c = CP_Map(ctx)
     For i = 1 To c.Count
@@ -110,9 +125,12 @@ Public Function CP_ListCandidates(ByVal query As String) As Collection
     Next i
 End Function
 
+' s の最後のトークンを newTok にした文字列。newTok に空白や " があれば "..." で囲む
+' (ランチャーが1つの引数として受け取れるように)
 Public Function CP_ReplaceLastToken(ByVal s As String, ByVal newTok As String) As String
     Dim i As Long
 
+    newTok = QuoteToken(newTok)
     i = InStrRev(s, " ")
     If i = 0 Then
         CP_ReplaceLastToken = newTok
@@ -128,6 +146,37 @@ End Function
 '-------------------------
 ' 内部ユーティリティ
 '-------------------------
+
+' 候補を作る関数 (Module.Func) を呼び、返ってきた候補を result に足す。
+' 入力途中の開き引用符 ("設計 など) は外して渡す
+Private Sub AddProvidedCandidates(ByVal result As Collection, ByVal func As String, ByVal prefix As String)
+    Dim pairs As Variant
+    Dim i As Long
+
+    If Left$(prefix, 1) = """" Then prefix = Mid$(prefix, 2)
+
+    On Error GoTo FAILED
+    pairs = Application.Run("'" & ThisWorkbook.Name & "'!" & func, prefix)
+    If Not IsArray(pairs) Then Exit Sub
+    For i = LBound(pairs) To UBound(pairs)
+        result.Add pairs(i)
+    Next i
+    Exit Sub
+
+FAILED:
+    ' 候補を出せなくても入力は続けられるので、何も足さずに戻る
+End Sub
+
+' 空白や " を含むトークンを、ランチャーの引数の書き方 ("..."、\" と \\) にする
+Private Function QuoteToken(ByVal tok As String) As String
+    If InStr(tok, " ") = 0 And InStr(tok, """") = 0 Then
+        QuoteToken = tok
+        Exit Function
+    End If
+    tok = Replace(tok, "\", "\\")
+    tok = Replace(tok, """", "\""")
+    QuoteToken = """" & tok & """"
+End Function
 Private Sub ParseLineToTokenDesc(ByVal line As String, ByRef tok As String, ByRef desc As String)
     Dim p As Long
     p = InStr(line, ":")
