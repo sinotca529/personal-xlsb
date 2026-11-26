@@ -52,6 +52,29 @@ Public Sub html()
         Exit Sub
     End If
 
+    Dim src As String
+    Dim nShownRows As Long, nShownCols As Long
+    src = TableHtml(rng, nShownRows, nShownCols)
+    If Len(src) = 0 Then
+        Application.StatusBar = "[html] All rows or columns in the selection are hidden."
+        Exit Sub
+    End If
+
+    If mClipboard.SetClipboardHtml(src, src) Then
+        Application.StatusBar = "[html] Copied a " & nShownRows & "x" & nShownCols & " table."
+    Else
+        Application.StatusBar = "[html] Failed to write to the clipboard."
+    End If
+    Exit Sub
+
+FINALLY:
+    Application.StatusBar = "[html] E" & Err.Number & ": " & Err.Description
+End Sub
+
+' rng を HTML の <table> にしたソース。表示されている行・列の数を nShownRows / nShownCols に返す。
+' 行か列がすべて非表示なら空文字列
+Public Function TableHtml(ByVal rng As Range, _
+                          Optional ByRef nShownRows As Long, Optional ByRef nShownCols As Long) As String
     Dim nRows As Long, nCols As Long
     Dim r As Long, c As Long
     Dim rowShown() As Boolean, colShown() As Boolean
@@ -70,8 +93,9 @@ Public Sub html()
 
     Dim lines As Collection: Set lines = New Collection
     Dim tr As String
-    Dim nShownRows As Long, nShownCols As Long
 
+    nShownRows = 0
+    nShownCols = 0
     lines.Add "<table style=""border-collapse:collapse"">"
     lines.Add "<colgroup>"
     For c = 1 To nCols
@@ -96,23 +120,9 @@ Public Sub html()
     Next r
     lines.Add "</table>"
 
-    If nShownRows = 0 Or nShownCols = 0 Then
-        Application.StatusBar = "[html] All rows or columns in the selection are hidden."
-        Exit Sub
-    End If
-
-    Dim src As String
-    src = JoinLines(lines)
-    If mClipboard.SetClipboardHtml(src, src) Then
-        Application.StatusBar = "[html] Copied a " & nShownRows & "x" & nShownCols & " table."
-    Else
-        Application.StatusBar = "[html] Failed to write to the clipboard."
-    End If
-    Exit Sub
-
-FINALLY:
-    Application.StatusBar = "[html] E" & Err.Number & ": " & Err.Description
-End Sub
+    If nShownRows = 0 Or nShownCols = 0 Then Exit Function
+    TableHtml = JoinLines(lines)
+End Function
 
 ' rng 内の (r, c) から始まる <td>。結合セルなら範囲内のセルを covered にする
 Private Function CellHtml(ByVal rng As Range, ByVal r As Long, ByVal c As Long, _
@@ -161,19 +171,20 @@ End Function
 
 Private Function CellStyle(ByVal area As Range) As String
     Dim cell As Range
-    Dim df As DisplayFormat
+    Dim df As Object ' DisplayFormat か Range
     Dim s As String
 
     Set cell = area.Cells(1, 1).MergeArea.Cells(1, 1)
-    Set df = cell.DisplayFormat
+    Set df = ShownFormat(cell)
 
     ' 罫線は範囲の外周にあるセルから取る
-    s = s & BorderCss("border-top", area.Cells(1, 1).DisplayFormat.Borders(xlEdgeTop))
-    s = s & BorderCss("border-bottom", area.Cells(area.Rows.Count, 1).DisplayFormat.Borders(xlEdgeBottom))
-    s = s & BorderCss("border-left", area.Cells(1, 1).DisplayFormat.Borders(xlEdgeLeft))
-    s = s & BorderCss("border-right", area.Cells(1, area.Columns.Count).DisplayFormat.Borders(xlEdgeRight))
+    s = s & BorderCss("border-top", ShownFormat(area.Cells(1, 1)).Borders(xlEdgeTop))
+    s = s & BorderCss("border-bottom", ShownFormat(area.Cells(area.Rows.Count, 1)).Borders(xlEdgeBottom))
+    s = s & BorderCss("border-left", ShownFormat(area.Cells(1, 1)).Borders(xlEdgeLeft))
+    s = s & BorderCss("border-right", ShownFormat(area.Cells(1, area.Columns.Count)).Borders(xlEdgeRight))
 
-    If df.Interior.Pattern <> xlPatternNone Then
+    ' 塗りの有無は ColorIndex で見る (LibreOffice の Pattern は塗りがあっても xlPatternNone)
+    If df.Interior.ColorIndex <> xlColorIndexNone Then
         s = s & "background:" & mColorUtil.ColorLongToHex(df.Interior.Color) & ";"
     End If
 
@@ -188,13 +199,25 @@ Private Function CellStyle(ByVal area As Range) As String
     CellStyle = s
 End Function
 
+' 条件付き書式を反映した見た目の書式 (DisplayFormat)。DisplayFormat がない環境
+' (Excel 2007 以前・LibreOffice) ではセル自身の書式を使う。どちらも Interior / Font / Borders を持つ
+Private Function ShownFormat(ByVal cell As Range) As Object
+    Dim f As Object
+    On Error Resume Next
+    Set f = cell.DisplayFormat
+    On Error GoTo 0
+    If f Is Nothing Then Set f = cell
+    Set ShownFormat = f
+End Function
+
 ' 文字の書式の CSS。Null (セル内で混在) の項目は出さない。
 ' 上付き・下付きは <span> にだけ付ける (<td> の vertical-align を上書きしないため)
 Private Function FontCss(ByVal f As Font, ByVal withScript As Boolean) As String
     Dim s As String, deco As String
 
     If Not IsNull(f.Color) Then
-        If f.Color <> 0 Then s = s & "color:" & mColorUtil.ColorLongToHex(f.Color) & ";"
+        ' 黒 (Excel の自動は 0) と自動 (LibreOffice は -1) は出さない
+        If f.Color > 0 Then s = s & "color:" & mColorUtil.ColorLongToHex(f.Color) & ";"
     End If
     If IsTrue(f.Bold) Then s = s & "font-weight:bold;"
     If IsTrue(f.Italic) Then s = s & "font-style:italic;"
@@ -205,14 +228,24 @@ Private Function FontCss(ByVal f As Font, ByVal withScript As Boolean) As String
     If Len(deco) > 0 Then s = s & "text-decoration:" & Mid$(deco, 2) & ";"
 
     If withScript Then
-        If IsTrue(f.Superscript) Then
+        If IsTrue(ScriptFlag(f, True)) Then
             s = s & "vertical-align:super;font-size:smaller;"
-        ElseIf IsTrue(f.Subscript) Then
+        ElseIf IsTrue(ScriptFlag(f, False)) Then
             s = s & "vertical-align:sub;font-size:smaller;"
         End If
     End If
 
     FontCss = s
+End Function
+
+' Font.Superscript (isSuper) / Font.Subscript。読めない環境 (LibreOffice) では False
+Private Function ScriptFlag(ByVal f As Font, ByVal isSuper As Boolean) As Variant
+    Dim v As Variant
+    v = False
+    On Error Resume Next
+    If isSuper Then v = f.Superscript Else v = f.Subscript
+    On Error GoTo 0
+    ScriptFlag = v
 End Function
 
 Private Function IsTrue(ByVal v As Variant) As Boolean
@@ -232,7 +265,7 @@ Private Function RichTextHtml(ByVal cell As Range) As String
     If VarType(cell.Value2) <> vbString Then Exit Function
     Set f = cell.Font
     If Not (IsNull(f.Color) Or IsNull(f.Bold) Or IsNull(f.Italic) Or IsNull(f.Underline) Or _
-            IsNull(f.Strikethrough) Or IsNull(f.Superscript) Or IsNull(f.Subscript)) Then Exit Function
+            IsNull(f.Strikethrough) Or IsNull(ScriptFlag(f, True)) Or IsNull(ScriptFlag(f, False))) Then Exit Function
 
     On Error GoTo FALLBACK
     text = cell.Value2
@@ -297,7 +330,10 @@ End Function
 ' 横位置。HTML の既定 (左寄せ) と同じときは空文字列
 Private Function HAlignCss(ByVal cell As Range) As String
     Dim align As String
-    Select Case cell.HorizontalAlignment
+    Dim h As Variant
+    h = cell.HorizontalAlignment
+    If IsObject(h) Then h = xlGeneral ' LibreOffice は Nothing を返す
+    Select Case h
         Case xlCenter, xlCenterAcrossSelection: align = "center"
         Case xlRight: align = "right"
         Case xlJustify, xlDistributed: align = "justify"

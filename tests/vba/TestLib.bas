@@ -25,8 +25,16 @@ Public Sub TModule(ByVal moduleName As String)
 End Sub
 
 Private Sub Emit(ByVal kind As String, ByVal desc As String, ByVal got As String, ByVal want As String)
-    mLines = mLines & kind & vbTab & mModule & vbTab & desc & vbTab & got & vbTab & want & vbLf
+    mLines = mLines & kind & vbTab & mModule & vbTab & OneLine(desc) & vbTab & OneLine(got) & vbTab & OneLine(want) & vbLf
 End Sub
+
+' 1 件 1 行のタブ区切りを崩さないよう、改行とタブを \r \n \t と書く
+Private Function OneLine(ByVal s As String) As String
+    s = Replace(s, "\", "\\")
+    s = Replace(s, vbCr, "\r")
+    s = Replace(s, vbLf, "\n")
+    OneLine = Replace(s, vbTab, "\t")
+End Function
 
 ' 期待値と実測値を文字列化して比較する (VBA の型強制の差を避けるため)。
 Public Sub Eq(ByVal desc As String, ByVal actual As Variant, ByVal expected As Variant)

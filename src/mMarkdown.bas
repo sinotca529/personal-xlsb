@@ -30,12 +30,6 @@ Public Sub md()
     On Error GoTo FINALLY
 
     Dim rng As Range
-    Dim cells_() As String
-    Dim widths() As Long
-    Dim rightAlign() As Boolean
-    Dim nRows As Long, nCols As Long
-    Dim r As Long, c As Long
-    Dim lines() As String
 
     If TypeName(Selection) <> "Range" Then Exit Sub
     If Selection.Areas.Count > 1 Then
@@ -47,6 +41,26 @@ Public Sub md()
         Application.StatusBar = "[md] The selection is empty."
         Exit Sub
     End If
+
+    If mClipboard.SetClipboardText(MarkdownTable(rng)) Then
+        Application.StatusBar = "[md] Copied a " & rng.Rows.Count & "x" & rng.Columns.Count & " table."
+    Else
+        Application.StatusBar = "[md] Failed to write to the clipboard."
+    End If
+    Exit Sub
+
+FINALLY:
+    Application.StatusBar = "[md] E" & Err.Number & ": " & Err.Description
+End Sub
+
+' rng を Markdown の表にした文字列 (各行の末尾は CRLF)
+Public Function MarkdownTable(ByVal rng As Range) As String
+    Dim cells_() As String
+    Dim widths() As Long
+    Dim rightAlign() As Boolean
+    Dim nRows As Long, nCols As Long
+    Dim r As Long, c As Long
+    Dim lines() As String
 
     nRows = rng.Rows.Count
     nCols = rng.Columns.Count
@@ -75,16 +89,8 @@ Public Sub md()
         lines(r) = FormatRow(cells_, r, widths, rightAlign)
     Next r
 
-    If mClipboard.SetClipboardText(Join(lines, vbCrLf) & vbCrLf) Then
-        Application.StatusBar = "[md] Copied a " & nRows & "x" & nCols & " table."
-    Else
-        Application.StatusBar = "[md] Failed to write to the clipboard."
-    End If
-    Exit Sub
-
-FINALLY:
-    Application.StatusBar = "[md] E" & Err.Number & ": " & Err.Description
-End Sub
+    MarkdownTable = Join(lines, vbCrLf) & vbCrLf
+End Function
 
 ' 表示どおりの文字列。列幅不足で ### になっている場合は値をそのまま使う (html でも使う)
 Public Function CellText(ByVal cell As Range) As String

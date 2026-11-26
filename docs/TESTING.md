@@ -28,7 +28,7 @@ doc.setPropertyValue("VBACompatibilityMode", True)
 
 1. `src/*.bas` `*.cls` を読み、VBE 固有のヘッダ (`Attribute VB_*` など) を落として
    `Option VBASupport 1` (クラスは `Option ClassModule` も) を付ける。
-   **コード本文には手を入れない。**
+   `Declare` 文の `PtrSafe` も取り除く (後述)。**それ以外のコード本文には手を入れない。**
 2. ヘッドレスの `soffice` を起動し、UNO ソケット越しに接続する。
 3. VBA 互換モードの Calc ドキュメントを開き、`src` と `tests/vba` の全モジュールを入れる。
 4. **モジュールごとにコンパイル確認**する (後述)。
@@ -75,6 +75,20 @@ ViewShell が作られず `Object variable not set (91)` になる。`--headless
 再インストールしても古いコンパイル結果が残り、テスト結果が汚染される。
 1 回のテスト実行につき新しいドキュメントを開く。
 
+### 4. コンパイルできない構文 (識別子のほか)
+
+1 と同じく、エラーも出さずにモジュールのコンパイルが失敗する。
+
+| 構文 | 対処 |
+| --- | --- |
+| `Declare PtrSafe` (`#If VBA7` などで分岐させても不可) | ランナーが読み込み時に `PtrSafe` を取り除く (`tests/harness/source.py`)。`Declare` と `LongPtr` はそのまま通る。Win32 API は Linux では呼べないので、`Declare` した関数を呼ぶ経路はテストしない |
+| 戻り値が `Byte()` の `Function` | `src/` 側で `ByRef data() As Byte` の引数で受け渡す (`mClipboard.BuildCfHtml`) |
+
+### 5. 結果の文字列に改行やタブを含めてよい
+
+`TestLib` は結果を 1 件 1 行のタブ区切りで Python 側に渡す。改行・タブ・`\` は
+`\n` `\t` `\\` などに置き換えて渡すので、`TestLib.Eq` に複数行の文字列をそのまま渡せる。
+
 ## 再現度の限界 — ここが緑でも Excel で緑とは限らない
 
 実測して分かっている差分:
@@ -86,6 +100,13 @@ ViewShell が作られず `Object variable not set (91)` になる。`--headless
 | `Application.StatusBar` の**読み出し** | 常に `False`。メッセージの検証には使えない |
 | `Shape` 系 (`BuildFreeform` など) | 未検証。`mPolygon` / `mLlp` のテストは未整備 |
 | `step` / `base` などの識別子 | VBA では合法、LibreOffice では壊れる |
+| `Range.DisplayFormat` | 存在しない (エラー 423)。`mHtml` は取れなければセル自身の書式を使う |
+| `Range.HorizontalAlignment` の**読み出し** | `Nothing` を返す。横位置の検証には使えない (`mHtml` は標準として扱う) |
+| `Font.Superscript` / `Font.Subscript` の**読み出し** | エラーになる (`mHtml` は False として扱う) |
+| `Interior.Pattern` の**読み出し** | 塗りがあっても `xlPatternNone`。塗りの有無は `Interior.ColorIndex` (塗りなしは `xlColorIndexNone`) なら正しく取れる |
+| `Font.Color` (自動) | `-1` を返す (Excel は `0`) |
+| セル内で書式が混在するときの `Range.Font.Bold` など | `Null` にならない。`Characters(i, 1).Font` は1文字ずつ正しく読めるが、混在を前提にした経路 (`mHtml` のセル内の一部だけの書式) は通らない |
+| `LenB(StrConv(s, vbFromUnicode))` | Excel と結果が違う。全角を2文字ぶんと数える列幅の揃え (`md`) は検証できない |
 
 そのため、罫線の検証は VBA からではなく **Python 側の UNO API**
 (`Cell.TopBorder.LineWidth` など) で行っている (`tests/run.py` の `check_tb_borders`)。
