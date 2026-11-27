@@ -33,6 +33,7 @@ uv run build.py
 | `mg` / `mt`                         | Excel 方眼紙の作成 / テーブル風の罫線                                                             | [`mMisc.bas`](src/mMisc.bas)         |
 | `tb`                                | 表の罫線                                                                                          | [`mUtil.bas`](src/mUtil.bas)         |
 | `db`                                | 選択範囲の各セルから指定辺の罫線を消す                                                            | [`mBorder.bas`](src/mBorder.bas)     |
+| `ditto`                             | すぐ上のセルと同じ値のセルの文字色をグレーにする (同じ値を並べた表を見やすく)                     | [`mDitto.bas`](src/mDitto.bas)       |
 | `fmt` / `pbp`                       | 全シートの表示をリセット / 改ページプレビューに                                                   | [`mView.bas`](src/mView.bas)         |
 | `polygon` / `box`                   | 数字セルを結んだ多角形 / 選択範囲を囲む矩形を作成                                                 | [`mPolygon.bas`](src/mPolygon.bas)   |
 | `palette`                           | Tailwind 配色の一覧シートを表示                                                                   | [`mPalette.bas`](src/mPalette.bas)   |

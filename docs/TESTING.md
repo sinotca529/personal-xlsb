@@ -129,6 +129,7 @@ ViewShell が作られず `Object variable not set (91)` になる。`--headless
 | `Font.Superscript` / `Font.Subscript` の**読み出し** | エラーになる (`mHtml` は False として扱う) |
 | `Interior.Pattern` の**読み出し** | 塗りがあっても `xlPatternNone`。塗りの有無は `Interior.ColorIndex` (塗りなしは `xlColorIndexNone`) なら正しく取れる |
 | `Font.Color` (自動) | `-1` を返す (Excel は `0`) |
+| `Font.ColorIndex = xlColorIndexAutomatic` | 文字色が「自動」ではなく黒 (`ColorIndex = 1`) になる。自動に戻ったかは検証できない (`ditto`) |
 | セル内で書式が混在するときの `Range.Font.Bold` など | `Null` にならない。`Characters(i, 1).Font` は1文字ずつ正しく読めるが、混在を前提にした経路 (`mHtml` のセル内の一部だけの書式) は通らない |
 | `LenB(StrConv(s, vbFromUnicode))` | Excel と結果が違う。全角を2文字ぶんと数える列幅の揃え (`md`) は検証できない |
 
