@@ -137,10 +137,21 @@ def _add_form(wb, name, spec, source):
 #
 # 左側は空白区切りのトークン列 (最後が候補、それより前が文脈)、2つ以上の空白を
 # 挟んで右側が説明。空のコメント行 (') か罫線 ('===) で節が終わる。
+#
+# 候補が入力のたびに変わる文脈 (シート名など) は、候補の代わりに @モジュール.関数 と書く。
+#
+#     ' COMPLETIONS
+#     '     ff              シート名の一部でシートへ移動
+#     '     ff @mSheet.SheetCandidates
+#
+# ランチャーは、その文脈で入力中のトークンを引数にして関数を呼び、返ってきた
+# 候補 (Array(候補, 説明) の配列) を、絞り込みも並べ替えもせずにそのまま表示する。
+# 関数のある文脈には、ほかの候補を書けない。
 
 _COMP_HEADING = re.compile(r"^'\s*COMPLETIONS\s*$")
 _COMP_ENTRY = re.compile(r"^'\s+(\S.*?)\s*$")
 _SUB_DEF = re.compile(r"^\s*(?:Public\s+)?Sub\s+(\w+)", re.IGNORECASE | re.MULTILINE)
+_PUBLIC_FUNC_DEF = re.compile(r"^\s*Public\s+Function\s+(\w+)", re.IGNORECASE | re.MULTILINE)
 
 
 def _parse_completions(fname, source):
@@ -162,8 +173,12 @@ def _parse_completions(fname, source):
     return entries
 
 
-def _completion_module(entries, sub_names):
-    """補完表を返す VBA モジュールのソースを作る。トップレベルの候補は実在する Sub か検査する。"""
+def _completion_module(entries, sub_names, func_names):
+    """補完表を返す VBA モジュールのソースを作る。トップレベルの候補は実在する Sub か、
+    @モジュール.関数 は実在する Public Function か検査する。
+
+    func_names は "モジュール.関数" を小文字にした集合。
+    """
     by_ctx = {"": []}
     seen = set()
     for fname, path, desc in entries:
@@ -173,7 +188,16 @@ def _completion_module(entries, sub_names):
         seen.add(key)
         if path[0].lower() not in sub_names:
             raise ValueError(f"{fname}: COMPLETIONS の {path[0]!r} に対応する Sub がありません")
+        if path[-1].startswith("@"):
+            if len(path) < 2:
+                raise ValueError(f"{fname}: COMPLETIONS の {path[-1]!r} には文脈 (コマンド名など) が要ります")
+            if path[-1][1:].lower() not in func_names:
+                raise ValueError(f"{fname}: COMPLETIONS の {path[-1]!r} に対応する Public Function がありません")
         by_ctx.setdefault(" ".join(path[:-1]), []).append((path[-1], desc))
+
+    for ctx, items in by_ctx.items():
+        if any(tok.startswith("@") for tok, _ in items) and len(items) > 1:
+            raise ValueError(f"COMPLETIONS の文脈 {ctx!r} に、候補を作る関数とほかの候補が混ざっています")
 
     by_ctx[""].sort(key=lambda item: item[0])  # トップレベルはコマンド名順、サブコマンドは記述順
     lines = []
@@ -206,6 +230,7 @@ def build_new(path):
         src_names = set()
         comp_entries = []
         sub_names = set()
+        func_names = set()
         for fname in sorted(os.listdir(SRC_DIR)):
             name, ext = os.path.splitext(fname)
             ext = ext.lower()
@@ -216,6 +241,7 @@ def build_new(path):
             if ext == ".bas":
                 comp_entries += _parse_completions(fname, source)
                 sub_names |= {n.lower() for n in _SUB_DEF.findall(source)}
+                func_names |= {f"{name}.{n}".lower() for n in _PUBLIC_FUNC_DEF.findall(source)}
 
             if ext == ".frm":
                 if name not in FORMS:
@@ -231,7 +257,7 @@ def build_new(path):
                     project.add_module(name, source, kind=kind)
             src_names.add(name)
 
-        project.add_module(COMP_MODULE, _completion_module(comp_entries, sub_names),
+        project.add_module(COMP_MODULE, _completion_module(comp_entries, sub_names, func_names),
                            kind=VBAModuleKind.standard)
 
         # テンプレート同梱の"Module1"がsrcに存在しない場合は空のまま残るため削除
