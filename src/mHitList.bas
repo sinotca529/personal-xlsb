@@ -7,7 +7,8 @@ Option Private Module
 
 ' ヒット1件 = Array(種別, 対象, 行, 列, 開始位置, 長さ, 説明)
 '   種別 "cell": 対象は Range。開始位置・長さは未使用
-'   種別 "shape": 対象は Shape。開始位置・長さはテキスト内のヒット位置 (その文字を選択する)
+'   種別 "shape": 対象は Shape。開始位置・長さはテキスト内のヒット位置 (その文字を選択する)。
+'                 長さが 0 なら図形そのものを選択する
 '   説明: ステータスバーに添える文字列 (例: "#REF!")。空でもよい
 Public Const H_KIND As Long = 0
 Public Const H_TARGET As Long = 1
@@ -159,8 +160,12 @@ Private Sub ShowHit()
             Application.Goto shp.TopLeftCell, True
         End If
         On Error Resume Next
-        shp.TextFrame2.TextRange.Characters(hit(H_START), hit(H_LEN)).Select
-        If Err.Number <> 0 Then Err.Clear: shp.Select
+        If hit(H_LEN) > 0 Then
+            shp.TextFrame2.TextRange.Characters(hit(H_START), hit(H_LEN)).Select
+            If Err.Number <> 0 Then Err.Clear: shp.Select
+        Else
+            shp.Select
+        End If
         On Error GoTo STALE
         where = ws.Name & "!" & shp.Name
     End If

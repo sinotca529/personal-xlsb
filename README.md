@@ -41,7 +41,7 @@ uv run build.py
 | `find` / `fn` / `fp` / `fq`         | セルと図形内のテキストをブック横断で検索し、`n` / `N` で順に移動                                  | [`mFind.bas`](src/mFind.bas)         |
 | `ff`                                | シート名のあいまい検索でシートへ移動 (候補を良い順に表示)                                         | [`mSheet.bas`](src/mSheet.bas)       |
 | `s`                                 | 選択範囲のセルと図形内のテキストを正規表現で置換 (`s/PAT/REP/g`)                                  | [`mSubst.bas`](src/mSubst.bas)       |
-| `lint`                              | 数式のエラーと外部ブックへの参照を調べ、`n` / `N` で順に移動                                      | [`mLint.bas`](src/mLint.bas)         |
+| `lint`                              | 数式のエラーと外部ブックへのつながり (数式・入力規則・リンク・図形・グラフ・名前) を調べ、`n` / `N` で順に移動 | [`mLint.bas`](src/mLint.bas)         |
 | `md`                                | 選択範囲を Markdown の表としてクリップボードにコピー                                              | [`mMarkdown.bas`](src/mMarkdown.bas) |
 | `html`                              | 選択範囲を罫線・書式つきの HTML の表としてクリップボードにコピー                                  | [`mHtml.bas`](src/mHtml.bas)         |
 | `sort` / `uniq` / `hsort` / `huniq` | 選択範囲の行 (h: 列) を並べ替え / 重複を取り除く                                                  | [`mSort.bas`](src/mSort.bas)         |

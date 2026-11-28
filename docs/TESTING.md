@@ -132,6 +132,10 @@ ViewShell が作られず `Object variable not set (91)` になる。`--headless
 | `Font.ColorIndex = xlColorIndexAutomatic` | 文字色が「自動」ではなく黒 (`ColorIndex = 1`) になる。自動に戻ったかは検証できない (`ditto`) |
 | `Workbook.FullName` | フォルダを含まないファイル名だけを返す (Excel はフルパス)。フルパスになっていることは検証できない (`path`) |
 | `Format$(Now, "hhnnss")` | `nn` が分ではなく曜日になる。テストで時刻から文字列を作るときは `Timer` を使う |
+| `CreateObject("VBScript.RegExp")` | 使えない (エラー 323)。正規表現を使う `lint` の外部参照の判定は検証できない |
+| `SpecialCells(xlCellTypeAllValidation)` | 使えない。入力規則のあるセルを探す処理 (`lint`) は検証できない |
+| 図形の `OnAction` / `TopLeftCell` / `HasChart`、`Workbook.Charts` | ない (エラー 423)。図形のマクロの登録先・グラフの系列・グラフシートの調査 (`lint`) は検証できない |
+| `On Error Resume Next` の中で握りつぶしたエラー | 手続きを抜けても `Err.Number` に残ることがある (VBA では消える)。例外が飛んできたかは、エラー処理のある手続きで受けて調べる |
 | セル内で書式が混在するときの `Range.Font.Bold` など | `Null` にならない。`Characters(i, 1).Font` は1文字ずつ正しく読めるが、混在を前提にした経路 (`mHtml` のセル内の一部だけの書式) は通らない |
 | `LenB(StrConv(s, vbFromUnicode))` | Excel と結果が違う。全角を2文字ぶんと数える列幅の揃え (`md`) は検証できない |
 
