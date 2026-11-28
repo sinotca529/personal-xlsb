@@ -36,6 +36,7 @@ uv run build.py
 | `ditto`                             | すぐ上のセルと同じ値のセルの文字色をグレーにする (同じ値を並べた表を見やすく)                     | [`mDitto.bas`](src/mDitto.bas)       |
 | `fmt` / `pbp`                       | 全シートの表示をリセット / 改ページプレビューに                                                   | [`mView.bas`](src/mView.bas)         |
 | `polygon` / `box`                   | 数字セルを結んだ多角形 / 選択範囲を囲む矩形を作成                                                 | [`mPolygon.bas`](src/mPolygon.bas)   |
+| `path`                              | ブックのフルパス・ファイル名・フォルダ・選択範囲の場所をコピー                                    | [`mPath.bas`](src/mPath.bas)         |
 | `palette`                           | Tailwind 配色の一覧シートを表示                                                                   | [`mPalette.bas`](src/mPalette.bas)   |
 | `find` / `fn` / `fp` / `fq`         | セルと図形内のテキストをブック横断で検索し、`n` / `N` で順に移動                                  | [`mFind.bas`](src/mFind.bas)         |
 | `ff`                                | シート名のあいまい検索でシートへ移動 (候補を良い順に表示)                                         | [`mSheet.bas`](src/mSheet.bas)       |
